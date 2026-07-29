@@ -135,6 +135,9 @@ export default function EmissaoFiscalPage() {
         <Link href="/frete/emissao/config" className="btn btn-outline">
           Parceiro fiscal
         </Link>
+        <Link href="/frete/emissao/certificados" className="btn btn-outline">
+          Certificados A1/A3
+        </Link>
       </div>
       <h1 className="page-title">Emissão fiscal</h1>
       <p className="page-sub">

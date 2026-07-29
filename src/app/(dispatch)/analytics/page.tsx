@@ -103,6 +103,9 @@ export default function AnalyticsPage() {
         <button type="button" className="btn btn-accent" onClick={exportCsv}>
           Export CSV
         </button>
+        <Link href="/analytics/lake" className="btn btn-outline">
+          Event lake
+        </Link>
         <Link href="/torre" className="btn btn-outline">
           Torre do dia
         </Link>

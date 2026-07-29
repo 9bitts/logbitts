@@ -64,6 +64,12 @@ export default function EstoqueDashboard() {
         <Link className="btn btn-outline" href="/estoque/cds">
           CDs
         </Link>
+        <Link className="btn btn-outline" href="/estoque/clientes-3pl">
+          3PL
+        </Link>
+        <Link className="btn btn-outline" href="/estoque/slotting">
+          Slotting
+        </Link>
         <Link className="btn" href="/armazem">
           App coletor
         </Link>

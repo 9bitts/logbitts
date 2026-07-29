@@ -608,6 +608,82 @@ ALTER TABLE delivery ADD COLUMN IF NOT EXISTS erp_key text;
 ALTER TABLE customer ADD COLUMN IF NOT EXISTS erp_key text;
 ALTER TABLE warehouse ADD COLUMN IF NOT EXISTS code text;
 ALTER TABLE warehouse ADD COLUMN IF NOT EXISTS active boolean DEFAULT true;
+ALTER TABLE delivery ADD COLUMN IF NOT EXISTS client_id text;
+CREATE TABLE IF NOT EXISTS tpl_client (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  code text,
+  document text,
+  email text,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS domain_event (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  event_type text NOT NULL,
+  entity_type text,
+  entity_id text,
+  warehouse_id text,
+  client_id text,
+  payload_json text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS load_offer (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  delivery_id text REFERENCES delivery(id) ON DELETE SET NULL,
+  shipment_id text REFERENCES freight_shipment(id) ON DELETE SET NULL,
+  origin_city text NOT NULL,
+  origin_state text NOT NULL,
+  dest_city text NOT NULL,
+  dest_state text NOT NULL,
+  weight_kg double precision NOT NULL DEFAULT 0,
+  volume_m3 double precision DEFAULT 0,
+  price_ask double precision,
+  status text NOT NULL DEFAULT 'open',
+  notes text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz
+);
+CREATE TABLE IF NOT EXISTS load_bid (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  offer_id text NOT NULL REFERENCES load_offer(id) ON DELETE CASCADE,
+  carrier_id text NOT NULL REFERENCES carrier(id) ON DELETE RESTRICT,
+  amount double precision NOT NULL,
+  transit_days integer DEFAULT 2,
+  status text NOT NULL DEFAULT 'open',
+  notes text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS slotting_rule (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  warehouse_id text REFERENCES warehouse(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  priority integer NOT NULL DEFAULT 100,
+  product_sku_prefix text,
+  location_type text,
+  prefer_picking boolean NOT NULL DEFAULT true,
+  max_weight_kg double precision,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS fiscal_certificate (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  type text NOT NULL DEFAULT 'A1',
+  alias text NOT NULL,
+  cnpj text,
+  fingerprint text,
+  storage_ref text,
+  valid_from text,
+  valid_to text,
+  status text NOT NULL DEFAULT 'pending',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 `;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

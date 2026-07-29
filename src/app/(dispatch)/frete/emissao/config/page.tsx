@@ -76,6 +76,7 @@ export default function FiscalConfigPage() {
           >
             <option value="mock">mock (homologação local)</option>
             <option value="http_stub">http_stub (parceiro)</option>
+            <option value="sefaz_direct">sefaz_direct (cert A1/A3)</option>
           </select>
         </div>
         <div className="field">

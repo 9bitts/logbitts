@@ -46,6 +46,9 @@ export default function FreteHubPage() {
         <Link className="btn btn-outline" href="/frete/embarques">
           Embarques
         </Link>
+        <Link className="btn btn-outline" href="/marketplace">
+          Marketplace
+        </Link>
         <Link className="btn btn-outline" href="/frete/emissao">
           Emissão fiscal
         </Link>

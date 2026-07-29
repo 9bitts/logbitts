@@ -64,6 +64,7 @@ export async function POST(req: Request) {
       updatedAt: new Date(),
       source: "manual",
       erpKey: null,
+      clientId: body.clientId || null,
     };
     if (!row.customerId) return json({ error: "customerId obrigatório" }, 400);
     await db.insert(schema.delivery).values(row);

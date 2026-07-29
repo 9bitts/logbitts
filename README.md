@@ -1,6 +1,6 @@
-# Logbitts — Fase 7 (Multi-CD + Analytics)
+# Logbitts — plataforma completa
 
-Plataforma logística modular com **múltiplos CDs** e **BI operacional**.
+Open Logistics modular: DMS, WMS, TMS, fiscal, YMS, ERP, multi-CD, 3PL, marketplace, slotting e SEFAZ direto (demo).
 
 ## Setup
 
@@ -22,17 +22,27 @@ npm run dev
 
 | Fase | Escopo |
 |------|--------|
-| 1–4 | DMS, WMS, TMS embarcador, fiscal |
+| 1 DMS | Rotas, torre, motorista PWA, POD |
+| 2 WMS | Estoque, recebimento, picking, inventário |
+| 3 TMS Embarcador | Cotação, embarques, auditoria, faturas |
+| 4 Fiscal | CT-e / MDF-e / CIOT (parceiro ou SEFAZ direto) |
 | 5 YMS | Docks, agenda, gate |
 | 6 ERP | Sync Winthor → entregas |
-| 7 Multi-CD + BI | Vários warehouses, seletor, `/analytics` (OTIF, funil, CSV) |
+| 7 Multi-CD + BI | Vários CDs, `/analytics` |
+| 8+ | **3PL**, **event lake**, **marketplace**, **slotting**, **cert A1/A3** |
 
-## Fluxo Fase 7
+## Atalhos das frentes finais
 
-1. **Estoque → CDs** — criar/listar warehouses (seed: CD-SP + CD-CP)  
-2. Seletor de CD em **Estoque** e **Pátio**  
-3. **Analytics** — período, OTIF diário, funil, estoque/docks por CD, export CSV  
+| Módulo | Rota |
+|--------|------|
+| Clientes 3PL | `/estoque/clientes-3pl` |
+| Slotting | `/estoque/slotting` |
+| Marketplace | `/marketplace` |
+| Certificados | `/frete/emissao/certificados` |
+| Event lake | `/analytics/lake` |
 
-## Fora de escopo (ainda)
+## Notas
 
-3PL multi-cliente completo, data lake, marketplace de cargas, slotting IA, certificado A1/A3 na SEFAZ.
+- Certificado A1/A3 é **stub de homologação** (fingerprint + ativação → `sefaz_direct`); não armazena chave privada nem fala com SEFAZ real.
+- Marketplace e 3PL são MVPs operacionais no mesmo tenant.
+- Event lake grava `domain_event` para export JSON / BI.

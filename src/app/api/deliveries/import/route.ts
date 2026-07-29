@@ -129,6 +129,7 @@ export async function POST(req: Request) {
           updatedAt: new Date(),
           source: "csv",
           erpKey: externalCode || null,
+          clientId: null,
         });
 
         const sku = pick(row, ["sku", "produto_sku"]);

@@ -428,6 +428,7 @@ async function main() {
         updatedAt: new Date(),
         source: "manual",
         erpKey: null,
+        clientId: null,
       });
       await db.insert(schema.deliveryLine).values({
         id: id("dln"),
@@ -724,14 +725,87 @@ async function main() {
     }
   }
 
+  // --- Phase 8+ seed: 3PL, slotting, cert ---
+  const [tpl] = await db
+    .select()
+    .from(schema.tplClient)
+    .where(eq(schema.tplClient.organizationId, orgId))
+    .limit(1);
+  if (!tpl) {
+    await db.insert(schema.tplClient).values([
+      {
+        id: id("tpl"),
+        organizationId: orgId,
+        name: "Cliente 3PL Alpha Alimentos",
+        code: "ALPHA",
+        document: "55.666.777/0001-88",
+        email: "ops@alpha.demo",
+        active: true,
+        createdAt: new Date(),
+      },
+      {
+        id: id("tpl"),
+        organizationId: orgId,
+        name: "Cliente 3PL Beta Bebidas",
+        code: "BETA",
+        document: "66.777.888/0001-99",
+        email: "logistica@beta.demo",
+        active: true,
+        createdAt: new Date(),
+      },
+    ]);
+  }
+
+  const [slotRule] = await db
+    .select()
+    .from(schema.slottingRule)
+    .where(eq(schema.slottingRule.organizationId, orgId))
+    .limit(1);
+  if (!slotRule) {
+    await db.insert(schema.slottingRule).values({
+      id: id("slr"),
+      organizationId: orgId,
+      warehouseId: wh.id,
+      name: "SKU → picking preferencial",
+      priority: 40,
+      productSkuPrefix: "SKU-",
+      locationType: "picking",
+      preferPicking: true,
+      maxWeightKg: 500,
+      active: true,
+      createdAt: new Date(),
+    });
+  }
+
+  const [cert] = await db
+    .select()
+    .from(schema.fiscalCertificate)
+    .where(eq(schema.fiscalCertificate.organizationId, orgId))
+    .limit(1);
+  if (!cert) {
+    await db.insert(schema.fiscalCertificate).values({
+      id: id("crt"),
+      organizationId: orgId,
+      type: "A1",
+      alias: "Demo A1 Homologação",
+      cnpj: "00.000.000/0001-91",
+      fingerprint: "ab:cd:ef:12:34:56:78:90:ab:cd:ef:12:34:56:78:90:ab:cd:ef:12",
+      storageRef: "demo://cert/seed",
+      validFrom: todayISO(),
+      validTo: "2027-12-31",
+      status: "pending",
+      createdAt: new Date(),
+    });
+  }
+
   console.log(`
-Seed OK (DMS + WMS + TMS + Fiscal + YMS + ERP + Multi-CD/BI)
+Seed OK (plataforma completa — fases 1–8+)
 
 Despacho:  despacho@logbitts.demo / demo1234
 Armazém:   armazem@logbitts.demo / demo1234
 Motorista: motorista@logbitts.demo / demo1234
 
-CDs: CD-SP + CD-CP | Analytics: /analytics | Estoque: seletor de CD
+3PL / Slotting / Marketplace / Cert A1 / Event lake disponíveis
 `);
 }
 

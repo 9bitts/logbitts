@@ -135,6 +135,23 @@ export async function runConnectorSync(
       .where(eq(schema.integrationSyncRun.id, runId))
       .limit(1);
 
+    try {
+      const { emitDomainEvent } = await import("@/server/events/emit");
+      await emitDomainEvent({
+        organizationId,
+        eventType: "erp.sync.completed",
+        entityType: "integration_sync_run",
+        entityId: runId,
+        payload: {
+          status,
+          createdDeliveries: result.createdDeliveries,
+          connector: connector.key,
+        },
+      });
+    } catch {
+      /* ignore */
+    }
+
     return { run, result, orders: orders.length };
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Falha no sync";

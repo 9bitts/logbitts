@@ -3,6 +3,7 @@ import { getDb, schema } from "@/server/db";
 import { id, todayISO } from "@/server/lib/ids";
 import { createHttpStubProvider } from "./http-stub";
 import { createMockProvider } from "./mock";
+import { createSefazDirectProvider } from "./sefaz-direct";
 import type {
   FiscalDocType,
   FiscalEmitRequest,
@@ -28,7 +29,12 @@ export async function getOrCreateFiscalConfig(organizationId: string) {
   const row = {
     id: id("fpc"),
     organizationId,
-    provider: envProvider === "http_stub" ? "http_stub" : "mock",
+    provider:
+      envProvider === "http_stub"
+        ? "http_stub"
+        : envProvider === "sefaz_direct"
+          ? "sefaz_direct"
+          : "mock",
     environment: process.env.FISCAL_ENVIRONMENT || "homologacao",
     apiKey: process.env.FISCAL_API_KEY || null,
     baseUrl: process.env.FISCAL_PARTNER_URL || null,
@@ -41,13 +47,54 @@ export async function getOrCreateFiscalConfig(organizationId: string) {
   return row;
 }
 
-export function resolveProvider(cfg: {
-  provider: string;
-  baseUrl: string | null;
-  apiKey: string | null;
-}): FiscalProvider {
+export async function resolveProvider(
+  organizationId: string,
+  cfg: {
+    provider: string;
+    baseUrl: string | null;
+    apiKey: string | null;
+  },
+): Promise<FiscalProvider> {
   if (cfg.provider === "http_stub" && cfg.baseUrl) {
     return createHttpStubProvider(cfg.baseUrl, cfg.apiKey);
+  }
+  if (cfg.provider === "sefaz_direct") {
+    const db = await getDb();
+    const [cert] = await db
+      .select()
+      .from(schema.fiscalCertificate)
+      .where(
+        and(
+          eq(schema.fiscalCertificate.organizationId, organizationId),
+          eq(schema.fiscalCertificate.status, "active"),
+        ),
+      )
+      .limit(1);
+    if (!cert) {
+      return {
+        kind: "sefaz_direct",
+        async emit() {
+          return {
+            ok: false,
+            status: "error",
+            message: "Nenhum certificado A1/A3 ativo. Cadastre em /frete/emissao/certificados",
+          };
+        },
+        async cancel() {
+          return { ok: false, status: "error", message: "Sem certificado" };
+        },
+        async status() {
+          return { ok: false, status: "error", message: "Sem certificado" };
+        },
+      };
+    }
+    const provider = createSefazDirectProvider({
+      fingerprint: cert.fingerprint || "",
+      type: cert.type,
+      alias: cert.alias,
+      status: cert.status,
+    });
+    return { ...provider, kind: "sefaz_direct" };
   }
   return createMockProvider();
 }
@@ -265,7 +312,7 @@ export async function submitEmission(
   }
 
   const cfg = await getOrCreateFiscalConfig(organizationId);
-  const provider = resolveProvider(cfg);
+  const provider = await resolveProvider(organizationId, cfg);
   const payload = await buildEmitRequest(organizationId, emission, cfg);
 
   await db
@@ -351,7 +398,7 @@ export async function cancelEmission(
   }
 
   const cfg = await getOrCreateFiscalConfig(organizationId);
-  const provider = resolveProvider(cfg);
+  const provider = await resolveProvider(organizationId, cfg);
   const result = await provider.cancel({
     emissionId: emission.id,
     docType: emission.docType as FiscalDocType,

@@ -117,6 +117,7 @@ export async function ingestErpOrders(
         updatedAt: new Date(),
         source,
         erpKey: orderNumber,
+        clientId: null,
       });
       delByCode.add(orderNumber);
       result.createdDeliveries++;

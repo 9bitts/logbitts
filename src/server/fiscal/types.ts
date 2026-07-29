@@ -1,5 +1,5 @@
 export type FiscalDocType = "cte" | "mdfe" | "ciot";
-export type FiscalProviderKind = "mock" | "http_stub";
+export type FiscalProviderKind = "mock" | "http_stub" | "sefaz_direct";
 
 export type FiscalEmitRequest = {
   emissionId: string;
@@ -48,7 +48,7 @@ export type FiscalCancelRequest = {
 };
 
 export interface FiscalProvider {
-  kind: FiscalProviderKind;
+  kind: FiscalProviderKind | string;
   emit(req: FiscalEmitRequest): Promise<FiscalEmitResult>;
   cancel(req: FiscalCancelRequest): Promise<FiscalEmitResult>;
   status(externalId: string): Promise<FiscalEmitResult>;

@@ -154,6 +154,7 @@ export const delivery = pgTable("delivery", {
   source: text("source").notNull().default("manual"),
   // manual | csv | erp
   erpKey: text("erp_key"),
+  clientId: text("client_id"),
 });
 
 export const route = pgTable("route", {
@@ -895,6 +896,114 @@ export const integrationSyncRun = pgTable("integration_sync_run", {
   detailJson: text("detail_json"),
 });
 
+/** Phase 8+ — 3PL, events/lake, marketplace, slotting, SEFAZ cert */
+export const tplClient = pgTable("tpl_client", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  code: text("code"),
+  document: text("document"),
+  email: text("email"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const domainEvent = pgTable("domain_event", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  eventType: text("event_type").notNull(),
+  entityType: text("entity_type"),
+  entityId: text("entity_id"),
+  warehouseId: text("warehouse_id"),
+  clientId: text("client_id"),
+  payloadJson: text("payload_json"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const loadOffer = pgTable("load_offer", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  deliveryId: text("delivery_id").references(() => delivery.id, {
+    onDelete: "set null",
+  }),
+  shipmentId: text("shipment_id").references(() => freightShipment.id, {
+    onDelete: "set null",
+  }),
+  originCity: text("origin_city").notNull(),
+  originState: text("origin_state").notNull(),
+  destCity: text("dest_city").notNull(),
+  destState: text("dest_state").notNull(),
+  weightKg: doublePrecision("weight_kg").notNull().default(0),
+  volumeM3: doublePrecision("volume_m3").default(0),
+  priceAsk: doublePrecision("price_ask"),
+  status: text("status").notNull().default("open"),
+  // open | bidding | awarded | cancelled | expired
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at"),
+});
+
+export const loadBid = pgTable("load_bid", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  offerId: text("offer_id")
+    .notNull()
+    .references(() => loadOffer.id, { onDelete: "cascade" }),
+  carrierId: text("carrier_id")
+    .notNull()
+    .references(() => carrier.id, { onDelete: "restrict" }),
+  amount: doublePrecision("amount").notNull(),
+  transitDays: integer("transit_days").default(2),
+  status: text("status").notNull().default("open"),
+  // open | accepted | rejected | withdrawn
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const slottingRule = pgTable("slotting_rule", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  warehouseId: text("warehouse_id").references(() => warehouse.id, {
+    onDelete: "cascade",
+  }),
+  name: text("name").notNull(),
+  priority: integer("priority").notNull().default(100),
+  productSkuPrefix: text("product_sku_prefix"),
+  locationType: text("location_type"),
+  preferPicking: boolean("prefer_picking").notNull().default(true),
+  maxWeightKg: doublePrecision("max_weight_kg"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const fiscalCertificate = pgTable("fiscal_certificate", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  type: text("type").notNull().default("A1"),
+  // A1 | A3
+  alias: text("alias").notNull(),
+  cnpj: text("cnpj"),
+  fingerprint: text("fingerprint"),
+  storageRef: text("storage_ref"),
+  validFrom: text("valid_from"),
+  validTo: text("valid_to"),
+  status: text("status").notNull().default("pending"),
+  // pending | active | expired | revoked
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export type Organization = typeof organization.$inferSelect;
 export type Customer = typeof customer.$inferSelect;
 export type Driver = typeof driver.$inferSelect;
@@ -911,4 +1020,5 @@ export type FiscalEmission = typeof fiscalEmission.$inferSelect;
 export type Dock = typeof dock.$inferSelect;
 export type YardAppointment = typeof yardAppointment.$inferSelect;
 export type IntegrationSyncRun = typeof integrationSyncRun.$inferSelect;
+export type TplClient = typeof tplClient.$inferSelect;
 export type MemberRole = "owner" | "dispatcher" | "driver" | "warehouse";
