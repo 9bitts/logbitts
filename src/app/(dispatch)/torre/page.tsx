@@ -39,6 +39,11 @@ type Kpis = {
   avgCostPerKm: number | null;
   authorizedEmissions: number;
   fiscalErrors: number;
+  docksFree: number;
+  docksTotal: number;
+  yardAppointments: number;
+  vehiclesOnSite: number;
+  avgYardWaitMin: number | null;
 };
 
 export default function TorrePage() {
@@ -84,7 +89,7 @@ export default function TorrePage() {
     <div>
       <h1 className="page-title">Torre de controle</h1>
       <p className="page-sub">
-        Operação do dia + KPIs embarcador (OTIF, custo/km, frete, fiscal).
+        Operação do dia + KPIs embarcador e pátio (OTIF, frete, fiscal, docks).
       </p>
       <div className="toolbar">
         <input
@@ -95,7 +100,10 @@ export default function TorrePage() {
         <button type="button" className="btn btn-outline" onClick={load}>
           Atualizar
         </button>
-        <Link href="/frete/emissao" className="btn btn-accent">
+        <Link href="/patio" className="btn btn-accent">
+          Pátio
+        </Link>
+        <Link href="/frete/emissao" className="btn btn-outline">
           Emissão fiscal
         </Link>
         <Link href="/frete" className="btn btn-outline">
@@ -150,6 +158,47 @@ export default function TorrePage() {
                   </span>
                 </>
               ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {kpis ? (
+        <div className="grid-3" style={{ marginBottom: "1rem" }}>
+          <div className="panel">
+            <div className="muted" style={{ fontSize: "0.75rem" }}>
+              Docks livres
+            </div>
+            <strong style={{ fontSize: "1.6rem" }}>
+              {kpis.docksFree}/{kpis.docksTotal}
+            </strong>
+            <div className="muted">
+              Agenda hoje: {kpis.yardAppointments}
+            </div>
+          </div>
+          <div className="panel">
+            <div className="muted" style={{ fontSize: "0.75rem" }}>
+              Veículos no pátio
+            </div>
+            <strong style={{ fontSize: "1.6rem" }}>
+              {kpis.vehiclesOnSite}
+            </strong>
+            <div className="muted">
+              Espera média:{" "}
+              {kpis.avgYardWaitMin != null
+                ? `${kpis.avgYardWaitMin} min`
+                : "—"}
+            </div>
+          </div>
+          <div className="panel">
+            <div className="muted" style={{ fontSize: "0.75rem" }}>
+              Fiscal
+            </div>
+            <strong style={{ fontSize: "1.6rem" }}>
+              {kpis.authorizedEmissions} OK
+            </strong>
+            <div className="muted">
+              Erros: {kpis.fiscalErrors}
             </div>
           </div>
         </div>

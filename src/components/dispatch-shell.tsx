@@ -9,6 +9,7 @@ const links = [
   { href: "/rotas", label: "Rotas" },
   { href: "/entregas", label: "Entregas" },
   { href: "/estoque", label: "Estoque" },
+  { href: "/patio", label: "Pátio" },
   { href: "/frete", label: "Frete" },
   { href: "/cadastros", label: "Cadastros" },
 ];

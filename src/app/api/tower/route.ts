@@ -140,6 +140,46 @@ export async function GET(req: Request) {
       ["error", "rejected"].includes(e.status),
     ).length;
 
+    const docks = await db
+      .select()
+      .from(schema.dock)
+      .where(eq(schema.dock.organizationId, ctx.organizationId));
+    const apptsToday = await db
+      .select()
+      .from(schema.yardAppointment)
+      .where(
+        and(
+          eq(schema.yardAppointment.organizationId, ctx.organizationId),
+          eq(schema.yardAppointment.scheduledDate, date),
+        ),
+      );
+    const onSiteVisits = await db
+      .select()
+      .from(schema.yardVisit)
+      .where(
+        and(
+          eq(schema.yardVisit.organizationId, ctx.organizationId),
+          inArray(schema.yardVisit.status, ["on_site", "at_dock"]),
+        ),
+      );
+    const departedToday = await db
+      .select()
+      .from(schema.yardVisit)
+      .where(
+        and(
+          eq(schema.yardVisit.organizationId, ctx.organizationId),
+          eq(schema.yardVisit.status, "departed"),
+        ),
+      );
+    const withWait = departedToday.filter((v) => v.waitMinutes != null);
+    const avgYardWait =
+      withWait.length === 0
+        ? null
+        : Math.round(
+            withWait.reduce((s, v) => s + (v.waitMinutes || 0), 0) /
+              withWait.length,
+          );
+
     return json({
       date,
       routes: payload,
@@ -153,6 +193,11 @@ export async function GET(req: Request) {
         freightSpend: Math.round(freightSpend * 100) / 100,
         authorizedEmissions,
         fiscalErrors,
+        docksFree: docks.filter((d) => d.status === "free" && d.active).length,
+        docksTotal: docks.filter((d) => d.active).length,
+        yardAppointments: apptsToday.length,
+        vehiclesOnSite: onSiteVisits.length,
+        avgYardWaitMin: avgYardWait,
         avgCostPerKm: (() => {
           const withCost = payload.filter(
             (r) => r.metrics.costPerKm != null && r.metrics.km > 0,

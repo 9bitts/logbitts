@@ -773,6 +773,99 @@ export const ciotDocument = pgTable("ciot_document", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+/** Phase 5 — YMS (pátio / docks) + open integrations registry */
+export const dock = pgTable("dock", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  warehouseId: text("warehouse_id")
+    .notNull()
+    .references(() => warehouse.id, { onDelete: "cascade" }),
+  code: text("code").notNull(),
+  name: text("name").notNull(),
+  type: text("type").notNull().default("both"),
+  // inbound | outbound | both
+  status: text("status").notNull().default("free"),
+  // free | occupied | blocked | maintenance
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const yardAppointment = pgTable("yard_appointment", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  warehouseId: text("warehouse_id")
+    .notNull()
+    .references(() => warehouse.id, { onDelete: "cascade" }),
+  dockId: text("dock_id").references(() => dock.id, { onDelete: "set null" }),
+  type: text("type").notNull().default("inbound"),
+  // inbound | outbound | pickup | delivery
+  status: text("status").notNull().default("scheduled"),
+  // scheduled | confirmed | checked_in | at_dock | loading | done | no_show | cancelled
+  scheduledDate: text("scheduled_date").notNull(),
+  windowStart: text("window_start").notNull().default("08:00"),
+  windowEnd: text("window_end").notNull().default("09:00"),
+  carrierId: text("carrier_id").references(() => carrier.id, {
+    onDelete: "set null",
+  }),
+  vehiclePlate: text("vehicle_plate"),
+  driverName: text("driver_name"),
+  driverDocument: text("driver_document"),
+  receiptId: text("receipt_id").references(() => receipt.id, {
+    onDelete: "set null",
+  }),
+  shipmentId: text("shipment_id").references(() => freightShipment.id, {
+    onDelete: "set null",
+  }),
+  routeId: text("route_id").references(() => route.id, {
+    onDelete: "set null",
+  }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const yardVisit = pgTable("yard_visit", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  appointmentId: text("appointment_id").references(() => yardAppointment.id, {
+    onDelete: "set null",
+  }),
+  warehouseId: text("warehouse_id")
+    .notNull()
+    .references(() => warehouse.id, { onDelete: "cascade" }),
+  dockId: text("dock_id").references(() => dock.id, { onDelete: "set null" }),
+  vehiclePlate: text("vehicle_plate").notNull(),
+  driverName: text("driver_name"),
+  status: text("status").notNull().default("on_site"),
+  // on_site | at_dock | departed
+  checkedInAt: timestamp("checked_in_at").notNull().defaultNow(),
+  dockAssignedAt: timestamp("dock_assigned_at"),
+  checkedOutAt: timestamp("checked_out_at"),
+  waitMinutes: integer("wait_minutes"),
+  notes: text("notes"),
+});
+
+export const integrationConnector = pgTable("integration_connector", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  key: text("key").notNull(),
+  // winthor | sap | generic_rest | frete_marketplace | focus_nfe
+  name: text("name").notNull(),
+  status: text("status").notNull().default("available"),
+  // available | configured | connected | error
+  configJson: text("config_json"),
+  lastSyncAt: timestamp("last_sync_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export type Organization = typeof organization.$inferSelect;
 export type Customer = typeof customer.$inferSelect;
 export type Driver = typeof driver.$inferSelect;
@@ -786,4 +879,6 @@ export type Warehouse = typeof warehouse.$inferSelect;
 export type Location = typeof location.$inferSelect;
 export type Carrier = typeof carrier.$inferSelect;
 export type FiscalEmission = typeof fiscalEmission.$inferSelect;
+export type Dock = typeof dock.$inferSelect;
+export type YardAppointment = typeof yardAppointment.$inferSelect;
 export type MemberRole = "owner" | "dispatcher" | "driver" | "warehouse";

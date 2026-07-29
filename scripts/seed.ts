@@ -1,7 +1,7 @@
 import "dotenv/config";
 process.env.USE_PGLITE = process.env.USE_PGLITE || "1";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDb, schema } from "../src/server/db";
 import { getAuth } from "../src/server/auth";
 import { id, todayISO } from "../src/server/lib/ids";
@@ -524,15 +524,117 @@ async function main() {
     });
   }
 
+  // --- Fase 5 YMS ---
+  const existingDocks = await db
+    .select()
+    .from(schema.dock)
+    .where(eq(schema.dock.organizationId, orgId));
+  if (!existingDocks.length) {
+    const dockDefs = [
+      { code: "D01", name: "Dock 1 — Recebimento", type: "inbound" },
+      { code: "D02", name: "Dock 2 — Misto", type: "both" },
+      { code: "D03", name: "Dock 3 — Expedição", type: "outbound" },
+    ];
+    for (const d of dockDefs) {
+      await db.insert(schema.dock).values({
+        id: id("dock"),
+        organizationId: orgId,
+        warehouseId: wh.id,
+        code: d.code,
+        name: d.name,
+        type: d.type,
+        status: "free",
+        active: true,
+        createdAt: new Date(),
+      });
+    }
+  }
+
+  const [apptToday] = await db
+    .select()
+    .from(schema.yardAppointment)
+    .where(
+      and(
+        eq(schema.yardAppointment.organizationId, orgId),
+        eq(schema.yardAppointment.scheduledDate, todayISO()),
+      ),
+    )
+    .limit(1);
+  if (!apptToday) {
+    const [d01] = await db
+      .select()
+      .from(schema.dock)
+      .where(
+        and(
+          eq(schema.dock.organizationId, orgId),
+          eq(schema.dock.code, "D01"),
+        ),
+      )
+      .limit(1);
+    const [car] = await db
+      .select()
+      .from(schema.carrier)
+      .where(eq(schema.carrier.organizationId, orgId))
+      .limit(1);
+    await db.insert(schema.yardAppointment).values({
+      id: id("yap"),
+      organizationId: orgId,
+      warehouseId: wh.id,
+      dockId: d01?.id || null,
+      type: "inbound",
+      status: "scheduled",
+      scheduledDate: todayISO(),
+      windowStart: "09:00",
+      windowEnd: "10:00",
+      carrierId: car?.id || null,
+      vehiclePlate: "XYZ1A23",
+      driverName: "José Gate",
+      driverDocument: null,
+      receiptId: null,
+      shipmentId: null,
+      routeId: null,
+      notes: "Demo seed — recebimento",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  }
+
+  const existingConnectors = await db
+    .select()
+    .from(schema.integrationConnector)
+    .where(eq(schema.integrationConnector.organizationId, orgId))
+    .limit(1);
+  if (!existingConnectors.length) {
+    const catalog = [
+      { key: "winthor", name: "TOTVS Winthor (ERP)", status: "available" },
+      { key: "sap", name: "SAP (pedido / NF)", status: "available" },
+      { key: "generic_rest", name: "REST genérico (webhook)", status: "available" },
+      { key: "focus_nfe", name: "Focus NFe / parceiro fiscal", status: "configured" },
+      { key: "frete_marketplace", name: "Marketplace de frete", status: "available" },
+    ];
+    for (const c of catalog) {
+      await db.insert(schema.integrationConnector).values({
+        id: id("icn"),
+        organizationId: orgId,
+        key: c.key,
+        name: c.name,
+        status: c.status,
+        configJson: null,
+        lastSyncAt: null,
+        createdAt: new Date(),
+      });
+    }
+  }
+
   console.log(`
-Seed OK (DMS + WMS + TMS + Fiscal)
+Seed OK (DMS + WMS + TMS + Fiscal + YMS)
 
 Despacho:  despacho@logbitts.demo / demo1234
 Armazém:   armazem@logbitts.demo / demo1234
 Motorista: motorista@logbitts.demo / demo1234
 
-Frete: /frete → cotação → embarque → emissão CT-e/MDF-e/CIOT → auditoria → fatura
-Torre: KPIs OTIF / custo-km / emissões fiscais
+Pátio: /patio → docks → agenda → gate
+Integrações: /integracoes
 `);
 }
 

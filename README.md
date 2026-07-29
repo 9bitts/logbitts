@@ -1,6 +1,6 @@
-# Logbitts — Fase 4 (DMS + WMS + TMS Embarcador + Fiscal)
+# Logbitts — Fase 5 (DMS + WMS + TMS + Fiscal + YMS)
 
-Gestão de entregas, armazém, frete embarcador e **emissão fiscal** (CT-e, MDF-e, CIOT) via parceiro.
+Gestão de entregas, armazém, frete, emissão fiscal e **pátio (YMS)** — docks, agenda e gate.
 
 ## Setup
 
@@ -23,21 +23,19 @@ npm run dev
 | Fase | Escopo |
 |------|--------|
 | 1 DMS | Rotas, torre, motorista PWA, POD |
-| 2 WMS | Estoque, recebimento, picking, inventário, gate `ready_to_ship` |
-| 3 TMS Embarcador | Transportadoras, tabelas, cotação, embarques, auditoria CT-e, faturas |
-| 4 Fiscal | Emissão CT-e / MDF-e / CIOT via adapter (mock ou HTTP parceiro) |
+| 2 WMS | Estoque, recebimento, picking, inventário |
+| 3 TMS Embarcador | Cotação, embarques, auditoria CT-e, faturas |
+| 4 Fiscal | Emissão CT-e / MDF-e / CIOT via adapter |
+| 5 YMS + Open Platform | Docks, agenda, gate; catálogo de integrações (stubs) |
 
-## Fluxo frete + fiscal
+## Fluxo pátio (Fase 5)
 
-1. **Frete → Transportadoras / Tabelas**  
-2. **Cotação** → **Contratar** embarque  
-3. **Emissão fiscal** (`/frete/emissao`) → CT-e do embarque, MDF-e da rota, CIOT (TAC)  
-4. **Auditoria** → CT-e de terceiros (import)  
-5. **Faturas** → conciliação  
-6. **Torre** → OTIF, custo/km, emissões autorizadas / erros  
-
-Provider padrão: **mock** (autoriza em homologação sem SEFAZ). Para parceiro real, configure `http_stub` + `FISCAL_PARTNER_URL` em `/frete/emissao/config`.
+1. **Pátio → Docks** — cadastro (seed cria D01–D03)  
+2. **Agenda** — janela inbound/outbound + placa/transportadora  
+3. **Gate** — check-in → atribuir dock → checkout (mede espera)  
+4. **Torre** — docks livres, veículos no pátio, espera média  
+5. **Integrações** (`/integracoes`) — Winthor/SAP/REST/fiscal (stubs)
 
 ## Fora de escopo (ainda)
 
-Marketplace de cargas, Winthor nativo, slotting IA, certificado A1/A3 direto na SEFAZ.
+Multi-CD / 3PL completo, BI enterprise, marketplace de cargas real, Winthor nativo (além do stub), slotting IA, certificado A1/A3 na SEFAZ.

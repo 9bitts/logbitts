@@ -530,6 +530,63 @@ CREATE TABLE IF NOT EXISTS ciot_document (
 ALTER TABLE cte_document ADD COLUMN IF NOT EXISTS source text DEFAULT 'imported';
 ALTER TABLE cte_document ADD COLUMN IF NOT EXISTS emission_id text;
 ALTER TABLE cte_document ADD COLUMN IF NOT EXISTS protocol text;
+CREATE TABLE IF NOT EXISTS dock (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  warehouse_id text NOT NULL REFERENCES warehouse(id) ON DELETE CASCADE,
+  code text NOT NULL,
+  name text NOT NULL,
+  type text NOT NULL DEFAULT 'both',
+  status text NOT NULL DEFAULT 'free',
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS yard_appointment (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  warehouse_id text NOT NULL REFERENCES warehouse(id) ON DELETE CASCADE,
+  dock_id text REFERENCES dock(id) ON DELETE SET NULL,
+  type text NOT NULL DEFAULT 'inbound',
+  status text NOT NULL DEFAULT 'scheduled',
+  scheduled_date text NOT NULL,
+  window_start text NOT NULL DEFAULT '08:00',
+  window_end text NOT NULL DEFAULT '09:00',
+  carrier_id text REFERENCES carrier(id) ON DELETE SET NULL,
+  vehicle_plate text,
+  driver_name text,
+  driver_document text,
+  receipt_id text REFERENCES receipt(id) ON DELETE SET NULL,
+  shipment_id text REFERENCES freight_shipment(id) ON DELETE SET NULL,
+  route_id text REFERENCES route(id) ON DELETE SET NULL,
+  notes text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS yard_visit (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  appointment_id text REFERENCES yard_appointment(id) ON DELETE SET NULL,
+  warehouse_id text NOT NULL REFERENCES warehouse(id) ON DELETE CASCADE,
+  dock_id text REFERENCES dock(id) ON DELETE SET NULL,
+  vehicle_plate text NOT NULL,
+  driver_name text,
+  status text NOT NULL DEFAULT 'on_site',
+  checked_in_at timestamptz NOT NULL DEFAULT now(),
+  dock_assigned_at timestamptz,
+  checked_out_at timestamptz,
+  wait_minutes integer,
+  notes text
+);
+CREATE TABLE IF NOT EXISTS integration_connector (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  key text NOT NULL,
+  name text NOT NULL,
+  status text NOT NULL DEFAULT 'available',
+  config_json text,
+  last_sync_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
 `;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

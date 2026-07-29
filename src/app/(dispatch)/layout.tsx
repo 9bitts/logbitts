@@ -5,6 +5,8 @@ import { getAuth } from "@/server/auth";
 import { getDb, schema } from "@/server/db";
 import { DispatchShell } from "@/components/dispatch-shell";
 
+export const dynamic = "force-dynamic";
+
 export default async function DispatchLayout({
   children,
 }: {
