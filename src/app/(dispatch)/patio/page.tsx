@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import {
+  WarehouseSwitcher,
+  useWarehouseSelection,
+} from "@/components/warehouse-switcher";
 
 type Dock = { id: string; code: string; name: string; status: string; type: string };
 type Appt = {
@@ -21,29 +25,34 @@ type Visit = {
   status: string;
   checkedInAt: string;
   dock: { code: string } | null;
+  warehouseId?: string;
 };
 
 export default function PatioHubPage() {
+  const { warehouses, warehouseId, setWarehouseId } = useWarehouseSelection();
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [docks, setDocks] = useState<Dock[]>([]);
   const [appts, setAppts] = useState<Appt[]>([]);
   const [visits, setVisits] = useState<Visit[]>([]);
 
-  async function load() {
-    const [d, a, v] = await Promise.all([
-      fetch("/api/docks").then((r) => r.json()),
-      fetch(`/api/yard/appointments?date=${date}`).then((r) => r.json()),
-      fetch("/api/yard/visits?onSite=1").then((r) => r.json()),
-    ]);
-    setDocks(Array.isArray(d) ? d : []);
-    setAppts(Array.isArray(a) ? a : []);
-    setVisits(Array.isArray(v) ? v : []);
-  }
-
   useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date]);
+    if (!warehouseId) return;
+    const q = `warehouseId=${warehouseId}`;
+    Promise.all([
+      fetch(`/api/docks?${q}`).then((r) => r.json()),
+      fetch(`/api/yard/appointments?date=${date}&${q}`).then((r) => r.json()),
+      fetch("/api/yard/visits?onSite=1").then((r) => r.json()),
+    ]).then(([d, a, v]) => {
+      setDocks(Array.isArray(d) ? d : []);
+      setAppts(Array.isArray(a) ? a : []);
+      const allVisits = Array.isArray(v) ? v : [];
+      setVisits(
+        allVisits.filter(
+          (x: Visit) => !x.warehouseId || x.warehouseId === warehouseId,
+        ),
+      );
+    });
+  }, [date, warehouseId]);
 
   const free = docks.filter((d) => d.status === "free").length;
   const occupied = docks.filter((d) => d.status === "occupied").length;
@@ -52,9 +61,14 @@ export default function PatioHubPage() {
     <div>
       <h1 className="page-title">Pátio (YMS)</h1>
       <p className="page-sub">
-        Docks, agendamentos e gate — amarra recebimento e expedição ao CD.
+        Docks, agendamentos e gate por centro de distribuição.
       </p>
       <div className="toolbar">
+        <WarehouseSwitcher
+          warehouses={warehouses}
+          warehouseId={warehouseId}
+          onChange={setWarehouseId}
+        />
         <input
           type="date"
           value={date}
@@ -85,14 +99,6 @@ export default function PatioHubPage() {
         <div className="panel">
           <div className="muted">Agendamentos do dia</div>
           <strong style={{ fontSize: "1.5rem" }}>{appts.length}</strong>
-          <div className="muted">
-            Em andamento:{" "}
-            {
-              appts.filter((a) =>
-                ["checked_in", "at_dock", "loading"].includes(a.status),
-              ).length
-            }
-          </div>
         </div>
         <div className="panel">
           <div className="muted">Veículos no pátio</div>

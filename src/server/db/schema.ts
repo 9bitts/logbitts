@@ -276,9 +276,11 @@ export const warehouse = pgTable("warehouse", {
     .notNull()
     .references(() => organization.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
+  code: text("code"),
   address: text("address"),
   lat: doublePrecision("lat"),
   lng: doublePrecision("lng"),
+  active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

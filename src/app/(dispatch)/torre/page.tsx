@@ -103,7 +103,10 @@ export default function TorrePage() {
         <button type="button" className="btn btn-outline" onClick={load}>
           Atualizar
         </button>
-        <Link href="/patio" className="btn btn-accent">
+        <Link href="/analytics" className="btn btn-accent">
+          Analytics
+        </Link>
+        <Link href="/patio" className="btn btn-outline">
           Pátio
         </Link>
         <Link href="/frete/emissao" className="btn btn-outline">

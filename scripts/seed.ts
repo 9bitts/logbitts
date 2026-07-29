@@ -121,12 +121,82 @@ async function main() {
       id: id("wh"),
       organizationId: orgId,
       name: "CD São Paulo",
+      code: "CD-SP",
       address: "Av. do Estado, 1000 — São Paulo/SP",
       lat: -23.5505,
       lng: -46.6333,
+      active: true,
       createdAt: new Date(),
     };
     await db.insert(schema.warehouse).values(wh);
+  } else if (!wh.code) {
+    await db
+      .update(schema.warehouse)
+      .set({ code: "CD-SP", active: true })
+      .where(eq(schema.warehouse.id, wh.id));
+    wh = { ...wh, code: "CD-SP", active: true };
+  }
+
+  let [wh2] = await db
+    .select()
+    .from(schema.warehouse)
+    .where(
+      and(
+        eq(schema.warehouse.organizationId, orgId),
+        eq(schema.warehouse.code, "CD-CP"),
+      ),
+    )
+    .limit(1);
+  if (!wh2) {
+    const allWh = await db
+      .select()
+      .from(schema.warehouse)
+      .where(eq(schema.warehouse.organizationId, orgId));
+    if (allWh.length < 2) {
+      wh2 = {
+        id: id("wh"),
+        organizationId: orgId,
+        name: "CD Campinas",
+        code: "CD-CP",
+        address: "Rod. Anhanguera, km 90 — Campinas/SP",
+        lat: -22.9099,
+        lng: -47.0626,
+        active: true,
+        createdAt: new Date(),
+      };
+      await db.insert(schema.warehouse).values(wh2);
+      for (const d of [
+        { code: "REC-01", type: "receiving" },
+        { code: "SHIP-01", type: "shipping" },
+        { code: "A-01-01", type: "storage" },
+        { code: "P-01-01", type: "picking" },
+      ]) {
+        await db.insert(schema.location).values({
+          id: id("loc"),
+          organizationId: orgId,
+          warehouseId: wh2.id,
+          code: d.code,
+          type: d.type,
+          createdAt: new Date(),
+        });
+      }
+      for (const d of [
+        { code: "C01", name: "Dock C1 — Recebimento", type: "inbound" },
+        { code: "C02", name: "Dock C2 — Expedição", type: "outbound" },
+      ]) {
+        await db.insert(schema.dock).values({
+          id: id("dock"),
+          organizationId: orgId,
+          warehouseId: wh2.id,
+          code: d.code,
+          name: d.name,
+          type: d.type,
+          status: "free",
+          active: true,
+          createdAt: new Date(),
+        });
+      }
+    }
   }
 
   const [locCount] = await db
@@ -655,14 +725,13 @@ async function main() {
   }
 
   console.log(`
-Seed OK (DMS + WMS + TMS + Fiscal + YMS + ERP)
+Seed OK (DMS + WMS + TMS + Fiscal + YMS + ERP + Multi-CD/BI)
 
 Despacho:  despacho@logbitts.demo / demo1234
 Armazém:   armazem@logbitts.demo / demo1234
 Motorista: motorista@logbitts.demo / demo1234
 
-ERP: /integracoes/winthor → Sync agora → Entregas
-Pátio: /patio → docks → agenda → gate
+CDs: CD-SP + CD-CP | Analytics: /analytics | Estoque: seletor de CD
 `);
 }
 

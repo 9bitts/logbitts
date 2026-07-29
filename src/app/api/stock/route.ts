@@ -8,6 +8,7 @@ export async function GET(req: Request) {
     const ctx = await requireWarehouse();
     const url = new URL(req.url);
     const productId = url.searchParams.get("productId");
+    const warehouseId = url.searchParams.get("warehouseId");
     const db = await getDb();
 
     if (url.searchParams.get("movements") === "1") {
@@ -29,6 +30,9 @@ export async function GET(req: Request) {
         .where(eq(schema.stockMovement.organizationId, ctx.organizationId))
         .orderBy(desc(schema.stockMovement.createdAt))
         .limit(100);
+      if (warehouseId) {
+        moves = moves.filter((m) => m.location?.warehouseId === warehouseId);
+      }
       return json(
         moves.map((m) => ({
           ...m.movement,
@@ -53,6 +57,9 @@ export async function GET(req: Request) {
       .where(eq(schema.stockLevel.organizationId, ctx.organizationId));
 
     if (productId) rows = rows.filter((r) => r.stock.productId === productId);
+    if (warehouseId) {
+      rows = rows.filter((r) => r.location.warehouseId === warehouseId);
+    }
 
     return json(
       rows.map((r) => ({

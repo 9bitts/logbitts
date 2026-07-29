@@ -606,6 +606,8 @@ ALTER TABLE integration_connector ADD COLUMN IF NOT EXISTS last_error text;
 ALTER TABLE delivery ADD COLUMN IF NOT EXISTS source text DEFAULT 'manual';
 ALTER TABLE delivery ADD COLUMN IF NOT EXISTS erp_key text;
 ALTER TABLE customer ADD COLUMN IF NOT EXISTS erp_key text;
+ALTER TABLE warehouse ADD COLUMN IF NOT EXISTS code text;
+ALTER TABLE warehouse ADD COLUMN IF NOT EXISTS active boolean DEFAULT true;
 `;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

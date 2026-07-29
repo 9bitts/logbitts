@@ -1,6 +1,6 @@
-# Logbitts — Fase 6 (DMS + WMS + TMS + Fiscal + YMS + ERP)
+# Logbitts — Fase 7 (Multi-CD + Analytics)
 
-Gestão logística modular com **integração ERP** (Winthor mock/HTTP → entregas).
+Plataforma logística modular com **múltiplos CDs** e **BI operacional**.
 
 ## Setup
 
@@ -22,20 +22,17 @@ npm run dev
 
 | Fase | Escopo |
 |------|--------|
-| 1 DMS | Rotas, torre, motorista PWA, POD |
-| 2 WMS | Estoque, recebimento, picking, inventário |
-| 3 TMS Embarcador | Cotação, embarques, auditoria CT-e, faturas |
-| 4 Fiscal | Emissão CT-e / MDF-e / CIOT via adapter |
-| 5 YMS | Docks, agenda, gate; catálogo de integrações |
-| 6 ERP | Sync Winthor/REST → clientes + entregas + histórico |
+| 1–4 | DMS, WMS, TMS embarcador, fiscal |
+| 5 YMS | Docks, agenda, gate |
+| 6 ERP | Sync Winthor → entregas |
+| 7 Multi-CD + BI | Vários warehouses, seletor, `/analytics` (OTIF, funil, CSV) |
 
-## Fluxo ERP (Fase 6)
+## Fluxo Fase 7
 
-1. **ERP → Winthor** (`/integracoes/winthor`) — modo `mock` ou `http`  
-2. **Sync agora** — importa pedidos idempotentes (por `orderNumber`)  
-3. **Entregas** — pedidos aparecem prontos para WMS/DMS  
-4. **Webhook** — `POST /api/integrations/webhook?org=...&key=winthor` + `X-Logbitts-Secret`  
+1. **Estoque → CDs** — criar/listar warehouses (seed: CD-SP + CD-CP)  
+2. Seletor de CD em **Estoque** e **Pátio**  
+3. **Analytics** — período, OTIF diário, funil, estoque/docks por CD, export CSV  
 
 ## Fora de escopo (ainda)
 
-Multi-CD / 3PL, BI enterprise, marketplace de cargas, slotting IA, certificado A1/A3 na SEFAZ, API Winthor proprietária oficial (usa middleware HTTP).
+3PL multi-cliente completo, data lake, marketplace de cargas, slotting IA, certificado A1/A3 na SEFAZ.

@@ -6,9 +6,11 @@ import { id, todayISO } from "@/server/lib/ids";
 export async function GET(req: Request) {
   try {
     const ctx = await requireDispatcher();
-    const date = new URL(req.url).searchParams.get("date") || todayISO();
+    const url = new URL(req.url);
+    const date = url.searchParams.get("date") || todayISO();
+    const warehouseId = url.searchParams.get("warehouseId");
     const db = await getDb();
-    const rows = await db
+    let rows = await db
       .select({
         appointment: schema.yardAppointment,
         dock: schema.dock,
@@ -32,6 +34,9 @@ export async function GET(req: Request) {
         ),
       )
       .orderBy(asc(schema.yardAppointment.windowStart));
+    if (warehouseId) {
+      rows = rows.filter((r) => r.appointment.warehouseId === warehouseId);
+    }
 
     return json(
       rows.map((r) => ({

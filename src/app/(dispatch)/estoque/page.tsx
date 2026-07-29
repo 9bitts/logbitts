@@ -2,8 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import {
+  WarehouseSwitcher,
+  useWarehouseSelection,
+} from "@/components/warehouse-switcher";
 
 export default function EstoqueDashboard() {
+  const { warehouses, warehouseId, setWarehouseId, current } =
+    useWarehouseSelection();
   const [stock, setStock] = useState<
     { qty: number; product: { sku: string; name: string }; location: { code: string } }[]
   >([]);
@@ -13,8 +19,10 @@ export default function EstoqueDashboard() {
   );
 
   useEffect(() => {
+    if (!warehouseId) return;
+    const q = `?warehouseId=${warehouseId}`;
     Promise.all([
-      fetch("/api/stock").then((r) => r.json()),
+      fetch(`/api/stock${q}`).then((r) => r.json()),
       fetch("/api/waves").then((r) => r.json()),
       fetch("/api/receipts").then((r) => r.json()),
     ]).then(([s, w, r]) => {
@@ -22,15 +30,22 @@ export default function EstoqueDashboard() {
       setWaves(Array.isArray(w) ? w : []);
       setReceipts(Array.isArray(r) ? r : []);
     });
-  }, []);
+  }, [warehouseId]);
 
   const low = stock.filter((s) => s.qty > 0 && s.qty < 10);
 
   return (
     <div>
       <h1 className="page-title">Estoque (WMS)</h1>
-      <p className="page-sub">Recebimento → endereçamento → picking → expedição (DMS).</p>
+      <p className="page-sub">
+        Multi-CD — recebimento → picking → expedição.
+      </p>
       <div className="toolbar">
+        <WarehouseSwitcher
+          warehouses={warehouses}
+          warehouseId={warehouseId}
+          onChange={setWarehouseId}
+        />
         <Link className="btn btn-outline" href="/estoque/produtos">
           Produtos
         </Link>
@@ -46,10 +61,14 @@ export default function EstoqueDashboard() {
         <Link className="btn btn-outline" href="/estoque/inventario">
           Inventário
         </Link>
+        <Link className="btn btn-outline" href="/estoque/cds">
+          CDs
+        </Link>
         <Link className="btn" href="/armazem">
           App coletor
         </Link>
       </div>
+      <p className="muted">CD ativo: {current?.name || "—"}</p>
       <div className="grid-3">
         <div className="panel">
           <h3 style={{ marginTop: 0 }}>Saldos baixos</h3>
@@ -83,49 +102,19 @@ export default function EstoqueDashboard() {
         </div>
         <div className="panel">
           <h3 style={{ marginTop: 0 }}>Ondas</h3>
-          <ul style={{ paddingLeft: "1rem" }}>
-            {waves.slice(0, 6).map((w) => (
-              <li key={w.id}>
-                {w.name} — <span className="badge">{w.status}</span>
-              </li>
-            ))}
-            {!waves.length ? <li className="muted">Nenhuma onda</li> : null}
-          </ul>
+          <strong style={{ fontSize: "1.5rem" }}>{waves.length}</strong>
+          <div className="muted">
+            Abertas: {waves.filter((w) => w.status !== "done").length}
+          </div>
         </div>
         <div className="panel">
           <h3 style={{ marginTop: 0 }}>Recebimentos</h3>
-          <ul style={{ paddingLeft: "1rem" }}>
-            {receipts.slice(0, 6).map((r) => (
-              <li key={r.id}>
-                {r.code} — <span className="badge">{r.status}</span>
-              </li>
-            ))}
-            {!receipts.length ? <li className="muted">Nenhum ASN</li> : null}
-          </ul>
+          <strong style={{ fontSize: "1.5rem" }}>{receipts.length}</strong>
+          <div className="muted">
+            Abertos:{" "}
+            {receipts.filter((r) => !["putaway_done", "cancelled"].includes(r.status || "")).length}
+          </div>
         </div>
-      </div>
-      <div className="panel" style={{ marginTop: "1rem" }}>
-        <h3 style={{ marginTop: 0 }}>Estoque atual</h3>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>SKU</th>
-              <th>Produto</th>
-              <th>Endereço</th>
-              <th>Qty</th>
-            </tr>
-          </thead>
-          <tbody>
-            {stock.map((s, i) => (
-              <tr key={i}>
-                <td>{s.product.sku}</td>
-                <td>{s.product.name}</td>
-                <td>{s.location.code}</td>
-                <td>{s.qty}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
     </div>
   );

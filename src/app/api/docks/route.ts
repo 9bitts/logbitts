@@ -3,11 +3,12 @@ import { getDb, schema } from "@/server/db";
 import { json, requireDispatcher } from "@/server/session";
 import { id } from "@/server/lib/ids";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const ctx = await requireDispatcher();
+    const warehouseId = new URL(req.url).searchParams.get("warehouseId");
     const db = await getDb();
-    const rows = await db
+    let rows = await db
       .select({
         dock: schema.dock,
         warehouse: schema.warehouse,
@@ -19,6 +20,9 @@ export async function GET() {
       )
       .where(eq(schema.dock.organizationId, ctx.organizationId))
       .orderBy(asc(schema.dock.code));
+    if (warehouseId) {
+      rows = rows.filter((r) => r.dock.warehouseId === warehouseId);
+    }
     return json(rows.map((r) => ({ ...r.dock, warehouse: r.warehouse })));
   } catch (e) {
     if (e instanceof Response) return e;

@@ -19,8 +19,8 @@ export default function EnderecosPage() {
       fetch("/api/warehouses").then((r) => r.json()),
       fetch("/api/locations").then((r) => r.json()),
     ]);
-    setWarehouses(w);
-    setLocations(l);
+    setWarehouses(Array.isArray(w) ? w : []);
+    setLocations(Array.isArray(l) ? l : []);
     if (w[0] && !form.warehouseId) setForm((f) => ({ ...f, warehouseId: w[0].id }));
   }
 
@@ -49,7 +49,17 @@ export default function EnderecosPage() {
       </div>
       <h1 className="page-title">Endereços</h1>
       <p className="page-sub">
-        CD: {warehouses[0]?.name || "—"}
+        CD:{" "}
+        <select
+          value={form.warehouseId}
+          onChange={(e) => setForm({ ...form, warehouseId: e.target.value })}
+        >
+          {warehouses.map((w) => (
+            <option key={w.id} value={w.id}>
+              {w.name}
+            </option>
+          ))}
+        </select>
       </p>
       <div className="grid-2">
         <div className="panel">
@@ -61,7 +71,9 @@ export default function EnderecosPage() {
               </tr>
             </thead>
             <tbody>
-              {locations.map((l) => (
+              {locations
+                .filter((l) => !form.warehouseId || l.warehouseId === form.warehouseId)
+                .map((l) => (
                 <tr key={l.id}>
                   <td>{l.code}</td>
                   <td>
