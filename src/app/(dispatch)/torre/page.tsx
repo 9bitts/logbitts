@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { RouteMap } from "@/components/route-map";
+import { RouteMap } from "@/components/route-map-lazy";
 import Link from "next/link";
 
 type TowerRoute = {
@@ -66,7 +66,7 @@ export default function TorrePage() {
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 20000);
+    const t = setInterval(load, 45000);
     return () => clearInterval(t);
   }, [load]);
 

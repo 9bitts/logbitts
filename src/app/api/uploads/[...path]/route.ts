@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { requireSession } from "@/server/session";
+import { safeUploadParts } from "@/server/storage";
 
 export async function GET(
   _req: Request,
@@ -9,12 +10,18 @@ export async function GET(
   try {
     const session = await requireSession();
     const parts = (await ctx.params).path;
-    if (!parts?.length || parts[0] !== session.organizationId) {
+    const safe = safeUploadParts(parts, session.organizationId);
+    if (!safe) {
       return new Response("Forbidden", { status: 403 });
     }
-    const filePath = path.join(process.cwd(), "uploads", ...parts);
-    const data = await fs.readFile(filePath);
-    const ext = path.extname(filePath).toLowerCase();
+    const filePath = path.join(process.cwd(), "uploads", ...safe);
+    const resolved = path.resolve(filePath);
+    const root = path.resolve(path.join(process.cwd(), "uploads", session.organizationId));
+    if (!resolved.startsWith(root + path.sep) && resolved !== root) {
+      return new Response("Forbidden", { status: 403 });
+    }
+    const data = await fs.readFile(resolved);
+    const ext = path.extname(resolved).toLowerCase();
     const type =
       ext === ".png"
         ? "image/png"

@@ -47,10 +47,35 @@ Variáveis obrigatórias:
 
 ```
 DATABASE_URL=postgresql://...
-BETTER_AUTH_SECRET=<secret longo>
+BETTER_AUTH_SECRET=<secret ≥32 chars>
 BETTER_AUTH_URL=https://logbitts-production.up.railway.app
 NEXT_PUBLIC_APP_URL=https://logbitts-production.up.railway.app
 ```
 
-No primeiro login o app cria automaticamente os usuários demo se o banco estiver vazio.
-Para dados completos (rotas, estoque, frete): rode `npm run db:seed` com `DATABASE_URL` apontando para o Postgres (sem `USE_PGLITE=1`).
+Opcionais de produção:
+
+```
+ALLOW_DEMO_BOOTSTRAP=1          # cria usuários demo no 1º boot (só se quiser)
+NEXT_PUBLIC_SHOW_DEMO_CREDENTIALS=1
+STORAGE_DRIVER=s3               # POD em R2/S3 (recomendado)
+S3_BUCKET=...
+S3_ENDPOINT=...
+S3_ACCESS_KEY_ID=...
+S3_SECRET_ACCESS_KEY=...
+S3_PUBLIC_BASE_URL=...
+```
+
+Sem `ALLOW_DEMO_BOOTSTRAP`, produção **não** cria usuários demo automaticamente.
+Com `STORAGE_DRIVER=local`, fotos de POD somem no redeploy (use volume ou S3).
+Fiscal `mock` retorna status `homologacao_mock` — não é autorização SEFAZ.
+
+Para dados completos (rotas, estoque, frete): `npm run db:seed` com `DATABASE_URL` no Postgres (sem `USE_PGLITE=1`).
+
+## Qualidade
+
+```bash
+npm run typecheck
+npm run lint
+npm run test:smoke
+npm run build
+```

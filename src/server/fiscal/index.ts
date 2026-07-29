@@ -116,7 +116,12 @@ async function buildEmitRequest(
     const [car] = await db
       .select()
       .from(schema.carrier)
-      .where(eq(schema.carrier.id, emission.carrierId))
+      .where(
+        and(
+          eq(schema.carrier.id, emission.carrierId),
+          eq(schema.carrier.organizationId, organizationId),
+        ),
+      )
       .limit(1);
     if (car) {
       carrierDocument = car.document;
@@ -127,7 +132,12 @@ async function buildEmitRequest(
     const [sh] = await db
       .select()
       .from(schema.freightShipment)
-      .where(eq(schema.freightShipment.id, emission.shipmentId))
+      .where(
+        and(
+          eq(schema.freightShipment.id, emission.shipmentId),
+          eq(schema.freightShipment.organizationId, organizationId),
+        ),
+      )
       .limit(1);
     if (sh) shipmentCode = sh.externalCode;
   }
@@ -135,7 +145,12 @@ async function buildEmitRequest(
     const [rt] = await db
       .select()
       .from(schema.route)
-      .where(eq(schema.route.id, emission.routeId))
+      .where(
+        and(
+          eq(schema.route.id, emission.routeId),
+          eq(schema.route.organizationId, organizationId),
+        ),
+      )
       .limit(1);
     if (rt) {
       routeCode = rt.name || rt.id;
@@ -328,7 +343,7 @@ export async function submitEmission(
 
   const result = await provider.emit(payload);
 
-  if (result.status === "authorized" && result.ok) {
+  if ((result.status === "authorized" || result.status === "homologacao_mock") && result.ok) {
     await db
       .update(schema.fiscalEmission)
       .set({

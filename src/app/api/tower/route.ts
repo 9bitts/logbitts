@@ -50,12 +50,14 @@ export async function GET(req: Request) {
     const shipments = await db
       .select()
       .from(schema.freightShipment)
-      .where(eq(schema.freightShipment.organizationId, ctx.organizationId));
+      .where(eq(schema.freightShipment.organizationId, ctx.organizationId))
+      .limit(300);
 
     const ctes = await db
       .select()
       .from(schema.cteDocument)
-      .where(eq(schema.cteDocument.organizationId, ctx.organizationId));
+      .where(eq(schema.cteDocument.organizationId, ctx.organizationId))
+      .limit(300);
 
     const payload = routes.map((r) => {
       const rs = stops.filter((s) => s.stop.routeId === r.id);
@@ -132,9 +134,10 @@ export async function GET(req: Request) {
     const emissions = await db
       .select()
       .from(schema.fiscalEmission)
-      .where(eq(schema.fiscalEmission.organizationId, ctx.organizationId));
+      .where(eq(schema.fiscalEmission.organizationId, ctx.organizationId))
+      .limit(300);
     const authorizedEmissions = emissions.filter(
-      (e) => e.status === "authorized",
+      (e) => e.status === "authorized" || e.status === "homologacao_mock",
     ).length;
     const fiscalErrors = emissions.filter((e) =>
       ["error", "rejected"].includes(e.status),
@@ -183,7 +186,8 @@ export async function GET(req: Request) {
     const syncRuns = await db
       .select()
       .from(schema.integrationSyncRun)
-      .where(eq(schema.integrationSyncRun.organizationId, ctx.organizationId));
+      .where(eq(schema.integrationSyncRun.organizationId, ctx.organizationId))
+      .limit(100);
     const erpDeliveriesToday = syncRuns
       .filter((r) => r.status === "success" || r.status === "partial")
       .reduce((s, r) => s + (r.createdDeliveries || 0), 0);

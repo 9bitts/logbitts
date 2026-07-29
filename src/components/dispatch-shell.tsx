@@ -21,10 +21,12 @@ export function DispatchShell({
   children,
   userName,
   orgName,
+  showDemoApps = false,
 }: {
   children: React.ReactNode;
   userName?: string;
   orgName?: string;
+  showDemoApps?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -39,7 +41,7 @@ export function DispatchShell({
             <small>{orgName || "Despacho"}</small>
           </div>
         </div>
-        <nav>
+        <nav aria-label="Principal">
           {links.map((l) => (
             <Link
               key={l.href}
@@ -51,12 +53,16 @@ export function DispatchShell({
           ))}
         </nav>
         <div className="header-right">
-          <Link href="/armazem" className="ghost-link">
-            App armazém
-          </Link>
-          <Link href="/motorista" className="ghost-link">
-            App motorista
-          </Link>
+          {showDemoApps ? (
+            <>
+              <Link href="/armazem" className="ghost-link demo-only">
+                App armazém
+              </Link>
+              <Link href="/motorista" className="ghost-link demo-only">
+                App motorista
+              </Link>
+            </>
+          ) : null}
           <span className="user-chip">{userName}</span>
           <button
             type="button"

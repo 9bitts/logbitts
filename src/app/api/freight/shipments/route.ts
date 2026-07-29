@@ -2,6 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { getDb, schema } from "@/server/db";
 import { json, requireDispatcher } from "@/server/session";
 import { id } from "@/server/lib/ids";
+import { assertOwned, assertOwnedOptional } from "@/server/lib/tenant";
 
 export async function GET(req: Request) {
   try {
@@ -42,7 +43,13 @@ export async function GET(req: Request) {
         .select()
         .from(schema.cteDocument)
         .where(eq(schema.cteDocument.shipmentId, shipmentId));
-      return json({ ...row.shipment, carrier: row.carrier, quote: row.quote, delivery: row.delivery, ctes });
+      return json({
+        ...row.shipment,
+        carrier: row.carrier,
+        quote: row.quote,
+        delivery: row.delivery,
+        ctes,
+      });
     }
 
     const rows = await db
@@ -56,7 +63,8 @@ export async function GET(req: Request) {
         eq(schema.freightShipment.carrierId, schema.carrier.id),
       )
       .where(eq(schema.freightShipment.organizationId, ctx.organizationId))
-      .orderBy(desc(schema.freightShipment.bookedAt));
+      .orderBy(desc(schema.freightShipment.bookedAt))
+      .limit(200);
 
     return json(rows.map((r) => ({ ...r.shipment, carrier: r.carrier })));
   } catch (e) {
@@ -97,7 +105,26 @@ export async function POST(req: Request) {
           .where(eq(schema.freightQuote.id, q.id));
       }
 
-      if (!carrierId) return json({ error: "carrierId ou quoteId obrigatório" }, 400);
+      if (!carrierId)
+        return json({ error: "carrierId ou quoteId obrigatório" }, 400);
+      await assertOwned(
+        schema.carrier,
+        carrierId,
+        ctx.organizationId,
+        "Transportadora",
+      );
+      await assertOwnedOptional(
+        schema.delivery,
+        body.deliveryId,
+        ctx.organizationId,
+        "Entrega",
+      );
+      await assertOwnedOptional(
+        schema.route,
+        body.routeId,
+        ctx.organizationId,
+        "Rota",
+      );
 
       const row = {
         id: id("fsh"),
@@ -106,7 +133,8 @@ export async function POST(req: Request) {
         quoteId,
         deliveryId: body.deliveryId || null,
         routeId: body.routeId || null,
-        externalCode: body.externalCode || `EMB-${Date.now().toString().slice(-6)}`,
+        externalCode:
+          body.externalCode || `EMB-${Date.now().toString().slice(-6)}`,
         expectedAmount,
         status: "booked",
         trackingCode: body.trackingCode || null,

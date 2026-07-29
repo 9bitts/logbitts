@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import {
   boolean,
   doublePrecision,
+  index,
   integer,
   pgTable,
   text,
@@ -80,31 +81,38 @@ export const member = pgTable(
     role: text("role").notNull(), // owner | dispatcher | driver | warehouse
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("member_org_user").on(t.organizationId, t.userId)],
+  (t) => [
+    uniqueIndex("member_org_user").on(t.organizationId, t.userId),
+    index("member_user_idx").on(t.userId),
+  ],
 );
 
-export const customer = pgTable("customer", {
-  id: text("id").primaryKey(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organization.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  document: text("document"),
-  phone: text("phone"),
-  email: text("email"),
-  address: text("address").notNull(),
-  neighborhood: text("neighborhood"),
-  city: text("city").notNull(),
-  state: text("state").notNull(),
-  zip: text("zip").notNull(),
-  lat: doublePrecision("lat"),
-  lng: doublePrecision("lng"),
-  windowStart: text("window_start"),
-  windowEnd: text("window_end"),
-  notes: text("notes"),
-  erpKey: text("erp_key"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const customer = pgTable(
+  "customer",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    document: text("document"),
+    phone: text("phone"),
+    email: text("email"),
+    address: text("address").notNull(),
+    neighborhood: text("neighborhood"),
+    city: text("city").notNull(),
+    state: text("state").notNull(),
+    zip: text("zip").notNull(),
+    lat: doublePrecision("lat"),
+    lng: doublePrecision("lng"),
+    windowStart: text("window_start"),
+    windowEnd: text("window_end"),
+    notes: text("notes"),
+    erpKey: text("erp_key"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [index("customer_org_idx").on(t.organizationId)],
+);
 
 export const driver = pgTable("driver", {
   id: text("id").primaryKey(),
@@ -132,75 +140,93 @@ export const vehicle = pgTable("vehicle", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const delivery = pgTable("delivery", {
-  id: text("id").primaryKey(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organization.id, { onDelete: "cascade" }),
-  customerId: text("customer_id")
-    .notNull()
-    .references(() => customer.id, { onDelete: "restrict" }),
-  externalCode: text("external_code"),
-  invoiceNumber: text("invoice_number"),
-  status: text("status").notNull().default("pending"),
-  // pending | picking | ready_to_ship | assigned | in_transit | delivered | failed | cancelled
-  weightKg: doublePrecision("weight_kg").default(0),
-  volumeM3: doublePrecision("volume_m3").default(0),
-  packages: integer("packages").default(1),
-  scheduledDate: text("scheduled_date"), // YYYY-MM-DD
-  notes: text("notes"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  source: text("source").notNull().default("manual"),
-  // manual | csv | erp
-  erpKey: text("erp_key"),
-  clientId: text("client_id"),
-});
+export const delivery = pgTable(
+  "delivery",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    customerId: text("customer_id")
+      .notNull()
+      .references(() => customer.id, { onDelete: "restrict" }),
+    externalCode: text("external_code"),
+    invoiceNumber: text("invoice_number"),
+    status: text("status").notNull().default("pending"),
+    // pending | picking | ready_to_ship | assigned | in_transit | delivered | failed | cancelled
+    weightKg: doublePrecision("weight_kg").default(0),
+    volumeM3: doublePrecision("volume_m3").default(0),
+    packages: integer("packages").default(1),
+    scheduledDate: text("scheduled_date"), // YYYY-MM-DD
+    notes: text("notes"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    source: text("source").notNull().default("manual"),
+    // manual | csv | erp
+    erpKey: text("erp_key"),
+    clientId: text("client_id"),
+  },
+  (t) => [
+    index("delivery_org_date_idx").on(t.organizationId, t.scheduledDate),
+    index("delivery_org_status_idx").on(t.organizationId, t.status),
+  ],
+);
 
-export const route = pgTable("route", {
-  id: text("id").primaryKey(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organization.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  routeDate: text("route_date").notNull(), // YYYY-MM-DD
-  driverId: text("driver_id").references(() => driver.id, {
-    onDelete: "set null",
-  }),
-  vehicleId: text("vehicle_id").references(() => vehicle.id, {
-    onDelete: "set null",
-  }),
-  status: text("status").notNull().default("draft"),
-  // draft | published | in_progress | completed
-  depotLat: doublePrecision("depot_lat"),
-  depotLng: doublePrecision("depot_lng"),
-  startedAt: timestamp("started_at"),
-  completedAt: timestamp("completed_at"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+export const route = pgTable(
+  "route",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    routeDate: text("route_date").notNull(), // YYYY-MM-DD
+    driverId: text("driver_id").references(() => driver.id, {
+      onDelete: "set null",
+    }),
+    vehicleId: text("vehicle_id").references(() => vehicle.id, {
+      onDelete: "set null",
+    }),
+    status: text("status").notNull().default("draft"),
+    // draft | published | in_progress | completed
+    depotLat: doublePrecision("depot_lat"),
+    depotLng: doublePrecision("depot_lng"),
+    startedAt: timestamp("started_at"),
+    completedAt: timestamp("completed_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [index("route_org_date_idx").on(t.organizationId, t.routeDate)],
+);
 
-export const stop = pgTable("stop", {
-  id: text("id").primaryKey(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organization.id, { onDelete: "cascade" }),
-  routeId: text("route_id")
-    .notNull()
-    .references(() => route.id, { onDelete: "cascade" }),
-  deliveryId: text("delivery_id")
-    .notNull()
-    .references(() => delivery.id, { onDelete: "restrict" }),
-  sequence: integer("sequence").notNull(),
-  status: text("status").notNull().default("pending"),
-  // pending | en_route | arrived | delivered | failed
-  etaMinutes: integer("eta_minutes"),
-  arrivedAt: timestamp("arrived_at"),
-  completedAt: timestamp("completed_at"),
-  failureReason: text("failure_reason"),
-  occurrenceNotes: text("occurrence_notes"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const stop = pgTable(
+  "stop",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    routeId: text("route_id")
+      .notNull()
+      .references(() => route.id, { onDelete: "cascade" }),
+    deliveryId: text("delivery_id")
+      .notNull()
+      .references(() => delivery.id, { onDelete: "restrict" }),
+    sequence: integer("sequence").notNull(),
+    status: text("status").notNull().default("pending"),
+    // pending | en_route | arrived | delivered | failed
+    etaMinutes: integer("eta_minutes"),
+    arrivedAt: timestamp("arrived_at"),
+    completedAt: timestamp("completed_at"),
+    failureReason: text("failure_reason"),
+    occurrenceNotes: text("occurrence_notes"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("stop_route_idx").on(t.routeId),
+    index("stop_org_idx").on(t.organizationId),
+  ],
+);
 
 export const stopEvent = pgTable("stop_event", {
   id: text("id").primaryKey(),
@@ -910,19 +936,25 @@ export const tplClient = pgTable("tpl_client", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const domainEvent = pgTable("domain_event", {
-  id: text("id").primaryKey(),
-  organizationId: text("organization_id")
-    .notNull()
-    .references(() => organization.id, { onDelete: "cascade" }),
-  eventType: text("event_type").notNull(),
-  entityType: text("entity_type"),
-  entityId: text("entity_id"),
-  warehouseId: text("warehouse_id"),
-  clientId: text("client_id"),
-  payloadJson: text("payload_json"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+export const domainEvent = pgTable(
+  "domain_event",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    eventType: text("event_type").notNull(),
+    entityType: text("entity_type"),
+    entityId: text("entity_id"),
+    warehouseId: text("warehouse_id"),
+    clientId: text("client_id"),
+    payloadJson: text("payload_json"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("domain_event_org_created_idx").on(t.organizationId, t.createdAt),
+  ],
+);
 
 export const loadOffer = pgTable("load_offer", {
   id: text("id").primaryKey(),

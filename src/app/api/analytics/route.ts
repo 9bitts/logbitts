@@ -1,4 +1,4 @@
-import { and, eq, gte, lte } from "drizzle-orm";
+import { and, eq, gte, inArray, lte } from "drizzle-orm";
 import { getDb, schema } from "@/server/db";
 import { json, requireDispatcher } from "@/server/session";
 import { todayISO } from "@/server/lib/ids";
@@ -29,15 +29,16 @@ export async function GET(req: Request) {
     const db = await getDb();
     const org = ctx.organizationId;
 
-    const deliveries = await db
+    const inRange = await db
       .select()
       .from(schema.delivery)
-      .where(eq(schema.delivery.organizationId, org));
-
-    const inRange = deliveries.filter((d) => {
-      const sd = d.scheduledDate || "";
-      return sd >= from && sd <= to;
-    });
+      .where(
+        and(
+          eq(schema.delivery.organizationId, org),
+          gte(schema.delivery.scheduledDate, from),
+          lte(schema.delivery.scheduledDate, to),
+        ),
+      );
 
     const routes = await db
       .select()
@@ -51,14 +52,18 @@ export async function GET(req: Request) {
       );
 
     const routeIds = routes.map((r) => r.id);
-    const stops =
+    const stopsIn =
       routeIds.length === 0
         ? []
         : await db
             .select()
             .from(schema.stop)
-            .where(eq(schema.stop.organizationId, org));
-    const stopsIn = stops.filter((s) => routeIds.includes(s.routeId));
+            .where(
+              and(
+                eq(schema.stop.organizationId, org),
+                inArray(schema.stop.routeId, routeIds),
+              ),
+            );
 
     const deliveredStops = stopsIn.filter((s) => s.status === "delivered").length;
     const failedStops = stopsIn.filter((s) => s.status === "failed").length;
@@ -69,7 +74,8 @@ export async function GET(req: Request) {
     const shipments = await db
       .select()
       .from(schema.freightShipment)
-      .where(eq(schema.freightShipment.organizationId, org));
+      .where(eq(schema.freightShipment.organizationId, org))
+      .limit(500);
     const freightSpend = shipments.reduce(
       (s, x) => s + (x.expectedAmount || 0),
       0,
@@ -78,7 +84,8 @@ export async function GET(req: Request) {
     const visits = await db
       .select()
       .from(schema.yardVisit)
-      .where(eq(schema.yardVisit.organizationId, org));
+      .where(eq(schema.yardVisit.organizationId, org))
+      .limit(500);
     const visitsInRange = visits.filter((v) => {
       const d = v.checkedInAt.toISOString().slice(0, 10);
       return d >= from && d <= to;
@@ -95,7 +102,8 @@ export async function GET(req: Request) {
     const syncRuns = await db
       .select()
       .from(schema.integrationSyncRun)
-      .where(eq(schema.integrationSyncRun.organizationId, org));
+      .where(eq(schema.integrationSyncRun.organizationId, org))
+      .limit(200);
     const syncInRange = syncRuns.filter((r) => {
       const d = r.startedAt.toISOString().slice(0, 10);
       return d >= from && d <= to;

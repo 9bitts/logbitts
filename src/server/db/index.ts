@@ -684,6 +684,17 @@ CREATE TABLE IF NOT EXISTS fiscal_certificate (
   status text NOT NULL DEFAULT 'pending',
   created_at timestamptz NOT NULL DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS member_user_idx ON member(user_id);
+CREATE INDEX IF NOT EXISTS customer_org_idx ON customer(organization_id);
+CREATE INDEX IF NOT EXISTS delivery_org_date_idx ON delivery(organization_id, scheduled_date);
+CREATE INDEX IF NOT EXISTS delivery_org_status_idx ON delivery(organization_id, status);
+CREATE INDEX IF NOT EXISTS route_org_date_idx ON route(organization_id, route_date);
+CREATE INDEX IF NOT EXISTS stop_route_idx ON stop(route_id);
+CREATE INDEX IF NOT EXISTS stop_org_idx ON stop(organization_id);
+CREATE INDEX IF NOT EXISTS domain_event_org_created_idx ON domain_event(organization_id, created_at);
+CREATE INDEX IF NOT EXISTS proof_org_stop_idx ON proof(organization_id, stop_id);
+CREATE INDEX IF NOT EXISTS freight_shipment_org_idx ON freight_shipment(organization_id);
+CREATE INDEX IF NOT EXISTS fiscal_emission_org_idx ON fiscal_emission(organization_id);
 `;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

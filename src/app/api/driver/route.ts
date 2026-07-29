@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { getDb, schema } from "@/server/db";
 import { json, requireSession } from "@/server/session";
 import { id, todayISO } from "@/server/lib/ids";
@@ -47,10 +47,19 @@ async function loadDriverRoute(routeId: string, organizationId: string) {
     .where(eq(schema.stop.routeId, routeId))
     .orderBy(asc(schema.stop.sequence));
 
-  const proofs = await db
-    .select()
-    .from(schema.proof)
-    .where(eq(schema.proof.organizationId, organizationId));
+  const stopIds = stops.map((s) => s.stop.id);
+  const proofs =
+    stopIds.length === 0
+      ? []
+      : await db
+          .select()
+          .from(schema.proof)
+          .where(
+            and(
+              eq(schema.proof.organizationId, organizationId),
+              inArray(schema.proof.stopId, stopIds),
+            ),
+          );
 
   return {
     ...r,
@@ -123,6 +132,26 @@ export async function POST(req: Request) {
     const routeId = body.routeId as string;
 
     if (action === "start_route") {
+      const [rt] = await db
+        .select()
+        .from(schema.route)
+        .where(
+          and(
+            eq(schema.route.id, routeId),
+            eq(schema.route.organizationId, ctx.organizationId),
+          ),
+        )
+        .limit(1);
+      if (!rt) return json({ error: "Rota não encontrada" }, 404);
+      const drv = await driverForUser(ctx.organizationId, ctx.user.id);
+      if (
+        ctx.role === "driver" &&
+        drv &&
+        rt.driverId &&
+        rt.driverId !== drv.id
+      ) {
+        return json({ error: "Rota de outro motorista" }, 403);
+      }
       await db
         .update(schema.route)
         .set({

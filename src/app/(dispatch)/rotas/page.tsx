@@ -16,7 +16,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { RouteMap } from "@/components/route-map";
+import { RouteMap } from "@/components/route-map-lazy";
 import Link from "next/link";
 
 type Delivery = {

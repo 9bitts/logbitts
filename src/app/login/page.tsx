@@ -4,10 +4,14 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 
+const showDemo =
+  process.env.NEXT_PUBLIC_SHOW_DEMO_CREDENTIALS === "1" ||
+  process.env.NODE_ENV !== "production";
+
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("despacho@logbitts.demo");
-  const [password, setPassword] = useState("demo1234");
+  const [email, setEmail] = useState(showDemo ? "despacho@logbitts.demo" : "");
+  const [password, setPassword] = useState(showDemo ? "demo1234" : "");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -54,6 +58,7 @@ export default function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             type="email"
             required
+            autoComplete="username"
           />
         </div>
         <div className="field">
@@ -63,6 +68,7 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             type="password"
             required
+            autoComplete="current-password"
           />
         </div>
         {error ? (
@@ -71,13 +77,15 @@ export default function LoginPage() {
         <button className="btn" style={{ width: "100%" }} disabled={loading}>
           {loading ? "Entrando…" : "Entrar"}
         </button>
-        <p className="muted" style={{ marginTop: "1rem", fontSize: "0.85rem" }}>
-          despacho@logbitts.demo / demo1234
-          <br />
-          armazem@logbitts.demo / demo1234
-          <br />
-          motorista@logbitts.demo / demo1234
-        </p>
+        {showDemo ? (
+          <p className="muted" style={{ marginTop: "1rem", fontSize: "0.85rem" }}>
+            despacho@logbitts.demo / demo1234
+            <br />
+            armazem@logbitts.demo / demo1234
+            <br />
+            motorista@logbitts.demo / demo1234
+          </p>
+        ) : null}
       </form>
     </div>
   );

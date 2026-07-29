@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { getDb, schema } from "./db";
 import { ensureDemoUsers } from "./bootstrap";
+import { allowDemoBootstrap, requireAuthSecret } from "./env";
 
 function appBaseUrl() {
   return (
@@ -14,6 +15,16 @@ function appBaseUrl() {
 
 function createAuth(db: Awaited<ReturnType<typeof getDb>>) {
   const baseURL = appBaseUrl();
+  const origins = new Set<string>([
+    baseURL,
+    process.env.NEXT_PUBLIC_APP_URL || "",
+    "http://localhost:3000",
+  ]);
+  // Explicit Railway public URL only (no wildcard — better-auth doesn't expand globs)
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+    origins.add(`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`);
+  }
+
   return betterAuth({
     database: drizzleAdapter(db, {
       provider: "pg",
@@ -30,15 +41,8 @@ function createAuth(db: Awaited<ReturnType<typeof getDb>>) {
     },
     plugins: [nextCookies()],
     baseURL,
-    secret:
-      process.env.BETTER_AUTH_SECRET ||
-      "dev-secret-change-me-logbitts-32chars!!",
-    trustedOrigins: [
-      baseURL,
-      process.env.NEXT_PUBLIC_APP_URL,
-      "https://*.up.railway.app",
-      "http://localhost:3000",
-    ].filter(Boolean) as string[],
+    secret: requireAuthSecret(),
+    trustedOrigins: [...origins].filter(Boolean),
   });
 }
 
@@ -52,7 +56,7 @@ export async function getAuth(): Promise<AuthInstance> {
     const db = await getDb();
     authInstance = createAuth(db);
   }
-  if (!bootstrapped) {
+  if (!bootstrapped && allowDemoBootstrap()) {
     bootstrapped = true;
     try {
       await ensureDemoUsers(authInstance);

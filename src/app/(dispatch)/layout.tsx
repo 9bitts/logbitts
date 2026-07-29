@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { getAuth } from "@/server/auth";
 import { getDb, schema } from "@/server/db";
 import { DispatchShell } from "@/components/dispatch-shell";
+import { allowDemoBootstrap } from "@/server/env";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,11 @@ export default async function DispatchLayout({
   }
 
   return (
-    <DispatchShell userName={session.user.name} orgName={orgName}>
+    <DispatchShell
+      userName={session.user.name}
+      orgName={orgName}
+      showDemoApps={allowDemoBootstrap()}
+    >
       {children}
     </DispatchShell>
   );

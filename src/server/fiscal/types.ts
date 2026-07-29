@@ -25,7 +25,12 @@ export type FiscalEmitRequest = {
 
 export type FiscalEmitResult = {
   ok: boolean;
-  status: "authorized" | "rejected" | "processing" | "error";
+  status:
+    | "authorized"
+    | "homologacao_mock"
+    | "rejected"
+    | "processing"
+    | "error";
   externalId?: string;
   chave?: string;
   number?: string;

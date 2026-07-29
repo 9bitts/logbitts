@@ -14,9 +14,13 @@ export async function POST(req: Request) {
   try {
     const url = new URL(req.url);
     const orgId =
-      url.searchParams.get("org") ||
-      req.headers.get("x-logbitts-org") ||
-      "org_demo_logbitts";
+      url.searchParams.get("org") || req.headers.get("x-logbitts-org");
+    if (!orgId) {
+      return json(
+        { error: "org obrigatório (?org= ou header x-logbitts-org)" },
+        400,
+      );
+    }
     const key = url.searchParams.get("key") || "winthor";
 
     await ensureConnectors(orgId);

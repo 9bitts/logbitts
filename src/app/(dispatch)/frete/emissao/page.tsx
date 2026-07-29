@@ -103,7 +103,9 @@ export default function EmissaoFiscalPage() {
     setMsg(
       data.status === "authorized"
         ? `${tab.toUpperCase()} autorizado: ${data.chave || data.number || data.protocol}`
-        : `${tab.toUpperCase()}: ${data.status} ${data.errorMessage || ""}`,
+        : data.status === "homologacao_mock"
+          ? `${tab.toUpperCase()} simulado (não SEFAZ): ${data.chave || data.number || data.protocol}`
+          : `${tab.toUpperCase()}: ${data.status} ${data.errorMessage || ""}`,
     );
     load();
   }
@@ -250,7 +252,7 @@ export default function EmissaoFiscalPage() {
                 <td>
                   <span
                     className={
-                      e.status === "authorized"
+                      e.status === "authorized" || e.status === "homologacao_mock"
                         ? "badge badge-ok"
                         : e.status === "error" || e.status === "rejected"
                           ? "badge badge-bad"
@@ -264,7 +266,7 @@ export default function EmissaoFiscalPage() {
                   ) : null}
                 </td>
                 <td>
-                  {e.status === "authorized" ? (
+                  {e.status === "authorized" || e.status === "homologacao_mock" ? (
                     <button
                       type="button"
                       className="btn btn-outline"
