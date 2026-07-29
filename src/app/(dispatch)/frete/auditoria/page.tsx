@@ -77,14 +77,18 @@ export default function AuditoriaPage() {
 
   return (
     <div>
-      <div className="toolbar">
+        <div className="toolbar">
         <Link href="/frete" className="ghost-link">
           ← Frete
+        </Link>
+        <Link href="/frete/emissao" className="btn btn-accent">
+          Emitir CT-e
         </Link>
       </div>
       <h1 className="page-title">Auditoria de CT-e</h1>
       <p className="page-sub">
-        Importação manual/JSON (stub). Emissão fiscal fica na Fase 4.
+        Importação manual/JSON de CT-e de terceiros. Para emitir, use{" "}
+        <Link href="/frete/emissao">Emissão fiscal</Link>.
       </p>
       <div className="grid-2">
         <div className="panel">

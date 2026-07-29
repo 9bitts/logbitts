@@ -452,6 +452,84 @@ CREATE TABLE IF NOT EXISTS freight_invoice_line (
   variance double precision,
   status text NOT NULL DEFAULT 'pending'
 );
+CREATE TABLE IF NOT EXISTS fiscal_provider_config (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  provider text NOT NULL DEFAULT 'mock',
+  environment text NOT NULL DEFAULT 'homologacao',
+  api_key text,
+  base_url text,
+  company_document text,
+  company_name text,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS fiscal_emission (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  doc_type text NOT NULL,
+  status text NOT NULL DEFAULT 'draft',
+  provider text NOT NULL DEFAULT 'mock',
+  shipment_id text REFERENCES freight_shipment(id) ON DELETE SET NULL,
+  route_id text REFERENCES route(id) ON DELETE SET NULL,
+  carrier_id text REFERENCES carrier(id) ON DELETE SET NULL,
+  driver_document text,
+  vehicle_plate text,
+  chave text,
+  number text,
+  series text,
+  protocol text,
+  external_id text,
+  freight_amount double precision NOT NULL DEFAULT 0,
+  weight_kg double precision,
+  origin_city text,
+  dest_city text,
+  origin_state text,
+  dest_state text,
+  request_json text,
+  response_json text,
+  error_message text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  authorized_at timestamptz,
+  cancelled_at timestamptz
+);
+CREATE TABLE IF NOT EXISTS mdfe_document (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  emission_id text REFERENCES fiscal_emission(id) ON DELETE SET NULL,
+  route_id text REFERENCES route(id) ON DELETE SET NULL,
+  chave text,
+  number text,
+  series text,
+  protocol text,
+  status text NOT NULL DEFAULT 'authorized',
+  vehicle_plate text,
+  driver_name text,
+  cte_keys_json text,
+  issue_date text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS ciot_document (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  emission_id text REFERENCES fiscal_emission(id) ON DELETE SET NULL,
+  shipment_id text REFERENCES freight_shipment(id) ON DELETE SET NULL,
+  carrier_id text REFERENCES carrier(id) ON DELETE SET NULL,
+  ciot_number text,
+  protocol text,
+  contractor_document text,
+  hired_document text,
+  freight_amount double precision NOT NULL DEFAULT 0,
+  status text NOT NULL DEFAULT 'authorized',
+  vehicle_plate text,
+  driver_document text,
+  issue_date text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE cte_document ADD COLUMN IF NOT EXISTS source text DEFAULT 'imported';
+ALTER TABLE cte_document ADD COLUMN IF NOT EXISTS emission_id text;
+ALTER TABLE cte_document ADD COLUMN IF NOT EXISTS protocol text;
 `;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

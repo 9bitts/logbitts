@@ -614,7 +614,11 @@ export const cteDocument = pgTable("cte_document", {
   originCity: text("origin_city"),
   destCity: text("dest_city"),
   status: text("status").notNull().default("imported"),
-  // imported | matched | mismatch | reconciled
+  // imported | matched | mismatch | reconciled | authorized | cancelled
+  source: text("source").notNull().default("imported"),
+  // imported | emitted
+  emissionId: text("emission_id"),
+  protocol: text("protocol"),
   expectedAmount: doublePrecision("expected_amount"),
   variance: doublePrecision("variance"),
   notes: text("notes"),
@@ -661,6 +665,114 @@ export const freightInvoiceLine = pgTable("freight_invoice_line", {
   // pending | ok | mismatch
 });
 
+/** Phase 4 — emissão fiscal via parceiro (CT-e / MDF-e / CIOT) */
+export const fiscalProviderConfig = pgTable("fiscal_provider_config", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull().default("mock"),
+  // mock | http_stub
+  environment: text("environment").notNull().default("homologacao"),
+  // homologacao | producao
+  apiKey: text("api_key"),
+  baseUrl: text("base_url"),
+  companyDocument: text("company_document"),
+  companyName: text("company_name"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const fiscalEmission = pgTable("fiscal_emission", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  docType: text("doc_type").notNull(),
+  // cte | mdfe | ciot
+  status: text("status").notNull().default("draft"),
+  // draft | queued | processing | authorized | rejected | cancelled | error
+  provider: text("provider").notNull().default("mock"),
+  shipmentId: text("shipment_id").references(() => freightShipment.id, {
+    onDelete: "set null",
+  }),
+  routeId: text("route_id").references(() => route.id, {
+    onDelete: "set null",
+  }),
+  carrierId: text("carrier_id").references(() => carrier.id, {
+    onDelete: "set null",
+  }),
+  driverDocument: text("driver_document"),
+  vehiclePlate: text("vehicle_plate"),
+  chave: text("chave"),
+  number: text("number"),
+  series: text("series"),
+  protocol: text("protocol"),
+  externalId: text("external_id"),
+  freightAmount: doublePrecision("freight_amount").notNull().default(0),
+  weightKg: doublePrecision("weight_kg"),
+  originCity: text("origin_city"),
+  destCity: text("dest_city"),
+  originState: text("origin_state"),
+  destState: text("dest_state"),
+  requestJson: text("request_json"),
+  responseJson: text("response_json"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  authorizedAt: timestamp("authorized_at"),
+  cancelledAt: timestamp("cancelled_at"),
+});
+
+export const mdfeDocument = pgTable("mdfe_document", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  emissionId: text("emission_id").references(() => fiscalEmission.id, {
+    onDelete: "set null",
+  }),
+  routeId: text("route_id").references(() => route.id, {
+    onDelete: "set null",
+  }),
+  chave: text("chave"),
+  number: text("number"),
+  series: text("series"),
+  protocol: text("protocol"),
+  status: text("status").notNull().default("authorized"),
+  vehiclePlate: text("vehicle_plate"),
+  driverName: text("driver_name"),
+  cteKeysJson: text("cte_keys_json"),
+  issueDate: text("issue_date"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const ciotDocument = pgTable("ciot_document", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  emissionId: text("emission_id").references(() => fiscalEmission.id, {
+    onDelete: "set null",
+  }),
+  shipmentId: text("shipment_id").references(() => freightShipment.id, {
+    onDelete: "set null",
+  }),
+  carrierId: text("carrier_id").references(() => carrier.id, {
+    onDelete: "set null",
+  }),
+  ciotNumber: text("ciot_number"),
+  protocol: text("protocol"),
+  contractorDocument: text("contractor_document"),
+  hiredDocument: text("hired_document"),
+  freightAmount: doublePrecision("freight_amount").notNull().default(0),
+  status: text("status").notNull().default("authorized"),
+  vehiclePlate: text("vehicle_plate"),
+  driverDocument: text("driver_document"),
+  issueDate: text("issue_date"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export type Organization = typeof organization.$inferSelect;
 export type Customer = typeof customer.$inferSelect;
 export type Driver = typeof driver.$inferSelect;
@@ -673,4 +785,5 @@ export type Product = typeof product.$inferSelect;
 export type Warehouse = typeof warehouse.$inferSelect;
 export type Location = typeof location.$inferSelect;
 export type Carrier = typeof carrier.$inferSelect;
+export type FiscalEmission = typeof fiscalEmission.$inferSelect;
 export type MemberRole = "owner" | "dispatcher" | "driver" | "warehouse";

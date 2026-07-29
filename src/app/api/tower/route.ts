@@ -129,6 +129,17 @@ export async function GET(req: Request) {
       0,
     );
 
+    const emissions = await db
+      .select()
+      .from(schema.fiscalEmission)
+      .where(eq(schema.fiscalEmission.organizationId, ctx.organizationId));
+    const authorizedEmissions = emissions.filter(
+      (e) => e.status === "authorized",
+    ).length;
+    const fiscalErrors = emissions.filter((e) =>
+      ["error", "rejected"].includes(e.status),
+    ).length;
+
     return json({
       date,
       routes: payload,
@@ -140,6 +151,8 @@ export async function GET(req: Request) {
         openShipments,
         mismatchCtes,
         freightSpend: Math.round(freightSpend * 100) / 100,
+        authorizedEmissions,
+        fiscalErrors,
         avgCostPerKm: (() => {
           const withCost = payload.filter(
             (r) => r.metrics.costPerKm != null && r.metrics.km > 0,

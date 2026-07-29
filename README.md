@@ -1,6 +1,6 @@
-# Logbitts — Fase 3 (DMS + WMS + TMS Embarcador)
+# Logbitts — Fase 4 (DMS + WMS + TMS Embarcador + Fiscal)
 
-Gestão de entregas, armazém e **frete embarcador** (cotação, contratação, auditoria CT-e, conciliação).
+Gestão de entregas, armazém, frete embarcador e **emissão fiscal** (CT-e, MDF-e, CIOT) via parceiro.
 
 ## Setup
 
@@ -24,17 +24,20 @@ npm run dev
 |------|--------|
 | 1 DMS | Rotas, torre, motorista PWA, POD |
 | 2 WMS | Estoque, recebimento, picking, inventário, gate `ready_to_ship` |
-| 3 TMS Embarcador | Transportadoras, tabelas, cotação, embarques, auditoria CT-e, faturas, KPIs torre |
+| 3 TMS Embarcador | Transportadoras, tabelas, cotação, embarques, auditoria CT-e, faturas |
+| 4 Fiscal | Emissão CT-e / MDF-e / CIOT via adapter (mock ou HTTP parceiro) |
 
-## Fluxo frete (Fase 3)
+## Fluxo frete + fiscal
 
-1. **Frete → Transportadoras / Tabelas** (seed já cria 2 carriers + faixas SP)  
-2. **Cotação** a partir de uma entrega → comparar valores  
-3. **Contratar** → embarque com tracking  
-4. **Auditoria CT-e** → importar valor e casar com esperado (±5%)  
-5. **Faturas** → agrupar CT-es e conciliar  
-6. **Torre** → OTIF, custo/km, frete, divergências  
+1. **Frete → Transportadoras / Tabelas**  
+2. **Cotação** → **Contratar** embarque  
+3. **Emissão fiscal** (`/frete/emissao`) → CT-e do embarque, MDF-e da rota, CIOT (TAC)  
+4. **Auditoria** → CT-e de terceiros (import)  
+5. **Faturas** → conciliação  
+6. **Torre** → OTIF, custo/km, emissões autorizadas / erros  
+
+Provider padrão: **mock** (autoriza em homologação sem SEFAZ). Para parceiro real, configure `http_stub` + `FISCAL_PARTNER_URL` em `/frete/emissao/config`.
 
 ## Fora de escopo (ainda)
 
-Emissão CT-e/MDF-e/CIOT (Fase 4), marketplace, Winthor nativo, slotting IA.
+Marketplace de cargas, Winthor nativo, slotting IA, certificado A1/A3 direto na SEFAZ.

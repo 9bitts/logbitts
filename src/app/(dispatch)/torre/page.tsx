@@ -37,6 +37,8 @@ type Kpis = {
   mismatchCtes: number;
   freightSpend: number;
   avgCostPerKm: number | null;
+  authorizedEmissions: number;
+  fiscalErrors: number;
 };
 
 export default function TorrePage() {
@@ -82,7 +84,7 @@ export default function TorrePage() {
     <div>
       <h1 className="page-title">Torre de controle</h1>
       <p className="page-sub">
-        Operação do dia + KPIs embarcador (OTIF, custo/km, frete, CT-e).
+        Operação do dia + KPIs embarcador (OTIF, custo/km, frete, fiscal).
       </p>
       <div className="toolbar">
         <input
@@ -93,8 +95,11 @@ export default function TorrePage() {
         <button type="button" className="btn btn-outline" onClick={load}>
           Atualizar
         </button>
-        <Link href="/frete" className="btn btn-accent">
-          Frete / auditoria
+        <Link href="/frete/emissao" className="btn btn-accent">
+          Emissão fiscal
+        </Link>
+        <Link href="/frete" className="btn btn-outline">
+          Frete
         </Link>
       </div>
 
@@ -135,6 +140,16 @@ export default function TorrePage() {
               <span className={kpis.mismatchCtes ? "badge badge-bad" : "badge"}>
                 {kpis.mismatchCtes}
               </span>
+              {" · "}
+              Emissões OK: {kpis.authorizedEmissions}
+              {kpis.fiscalErrors ? (
+                <>
+                  {" · "}
+                  <span className="badge badge-bad">
+                    erros {kpis.fiscalErrors}
+                  </span>
+                </>
+              ) : null}
             </div>
           </div>
         </div>

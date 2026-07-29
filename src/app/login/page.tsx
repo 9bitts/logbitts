@@ -33,11 +33,11 @@ export default function LoginPage() {
           <span className="brand-mark">L</span>
           <div>
             <strong>Logbitts</strong>
-            <small>Fase 1 — DMS</small>
+            <small>Fase 4 — Fiscal</small>
           </div>
         </div>
         <h1>Entrar</h1>
-        <p>Fase 3 — DMS + WMS + Frete embarcador.</p>
+        <p>Fase 4 — DMS + WMS + Frete + emissão CT-e/MDF-e/CIOT.</p>
         <div className="field">
           <label>E-mail</label>
           <input

@@ -503,15 +503,36 @@ async function main() {
     }
   }
 
+  // --- Fase 4 fiscal config ---
+  const [fiscalCfg] = await db
+    .select()
+    .from(schema.fiscalProviderConfig)
+    .where(eq(schema.fiscalProviderConfig.organizationId, orgId))
+    .limit(1);
+  if (!fiscalCfg) {
+    await db.insert(schema.fiscalProviderConfig).values({
+      id: id("fpc"),
+      organizationId: orgId,
+      provider: "mock",
+      environment: "homologacao",
+      apiKey: null,
+      baseUrl: null,
+      companyDocument: "00.000.000/0001-91",
+      companyName: "Distribuidora Demo Logbitts",
+      active: true,
+      createdAt: new Date(),
+    });
+  }
+
   console.log(`
-Seed OK (DMS + WMS + TMS Embarcador)
+Seed OK (DMS + WMS + TMS + Fiscal)
 
 Despacho:  despacho@logbitts.demo / demo1234
 Armazém:   armazem@logbitts.demo / demo1234
 Motorista: motorista@logbitts.demo / demo1234
 
-Frete: /frete → cotação → embarque → auditoria CT-e → fatura
-Torre: KPIs OTIF / custo-km / divergências
+Frete: /frete → cotação → embarque → emissão CT-e/MDF-e/CIOT → auditoria → fatura
+Torre: KPIs OTIF / custo-km / emissões fiscais
 `);
 }
 
