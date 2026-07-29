@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: logbitts
+      POSTGRES_PASSWORD: logbitts
+      POSTGRES_DB: logbitts
+    ports:
+      - "5432:5432"
+    volumes:
+      - logbitts_pg:/var/lib/postgresql/data
+
+volumes:
+  logbitts_pg:

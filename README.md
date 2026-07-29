@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Logbitts — Fase 1 (DMS + Roteirização)
 
-## Getting Started
+Gestão de entregas, montagem de rotas, torre de controle e app motorista (PWA) com POD.
 
-First, run the development server:
+## Stack
+
+- Next.js (App Router) + TypeScript
+- PostgreSQL via **PGlite embutido** (zero config) ou Neon/Docker
+- Drizzle ORM + Better Auth (multi-tenant por organização)
+- MapLibre + deep link Waze/Google Maps
+- Upload local de fotos/assinaturas (`uploads/`)
+
+## Setup rápido
 
 ```bash
+npm install
+cp .env.example .env   # já pode usar o .env com USE_PGLITE=1
+npm run icons
+npm run db:seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Perfil | E-mail | Senha |
+|--------|--------|-------|
+| Despacho | `despacho@logbitts.demo` | `demo1234` |
+| Motorista | `motorista@logbitts.demo` | `demo1234` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Fluxo do piloto
 
-## Learn More
+1. **Despacho** → Entregas (seed já cria 8) → Rotas → selecionar → criar rota → otimizar → publicar  
+2. **Torre** → acompanhar progresso no mapa  
+3. **Motorista** (`/motorista` ou PWA) → iniciar rota → Waze → check-in → foto + assinatura → POD  
 
-To learn more about Next.js, take a look at the following resources:
+## Postgres externo (Neon / Docker)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+docker compose up -d
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+No `.env`:
 
-## Deploy on Vercel
+```
+USE_PGLITE=0
+DATABASE_URL=postgresql://logbitts:logbitts@localhost:5432/logbitts
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Depois: `npm run db:seed`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Import CSV (stub ERP)
+
+`POST /api/deliveries/import` com CSV (`Content-Type: text/csv`) ou JSON.
+
+Colunas aceitas: `customer_name`, `address`, `city`, `state`, `zip`, `lat`, `lng`, `external_code`, `weight_kg`, `scheduled_date`, …
+
+## Escopo Fase 1
+
+Inclui: cadastros, entregas, rotas (drag-and-drop + otimização), torre, PWA motorista, POD, fila offline.
+
+Fora: CT-e/MDF-e/CIOT, WMS, marketplace, conector Winthor nativo.
+
+## Scripts
+
+| Script | Função |
+|--------|--------|
+| `npm run dev` | Dev server |
+| `npm run db:seed` | Dados demo |
+| `npm run icons` | Ícones PWA |
+| `npm run build` | Build produção |
