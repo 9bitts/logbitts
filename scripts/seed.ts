@@ -1,5 +1,8 @@
 import "dotenv/config";
-process.env.USE_PGLITE = process.env.USE_PGLITE || "1";
+// Prefer Postgres when DATABASE_URL is set; only default to PGlite for local pilot.
+if (!process.env.DATABASE_URL?.startsWith("postgres")) {
+  process.env.USE_PGLITE = process.env.USE_PGLITE ?? "1";
+}
 
 import { and, eq } from "drizzle-orm";
 import { getDb, schema } from "../src/server/db";

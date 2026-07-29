@@ -41,8 +41,16 @@ npm run dev
 | Certificados | `/frete/emissao/certificados` |
 | Event lake | `/analytics/lake` |
 
-## Notas
+## Deploy (Railway)
 
-- Certificado A1/A3 é **stub de homologação** (fingerprint + ativação → `sefaz_direct`); não armazena chave privada nem fala com SEFAZ real.
-- Marketplace e 3PL são MVPs operacionais no mesmo tenant.
-- Event lake grava `domain_event` para export JSON / BI.
+Variáveis obrigatórias:
+
+```
+DATABASE_URL=postgresql://...
+BETTER_AUTH_SECRET=<secret longo>
+BETTER_AUTH_URL=https://logbitts-production.up.railway.app
+NEXT_PUBLIC_APP_URL=https://logbitts-production.up.railway.app
+```
+
+No primeiro login o app cria automaticamente os usuários demo se o banco estiver vazio.
+Para dados completos (rotas, estoque, frete): rode `npm run db:seed` com `DATABASE_URL` apontando para o Postgres (sem `USE_PGLITE=1`).

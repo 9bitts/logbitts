@@ -15,15 +15,24 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const { error: err } = await authClient.signIn.email({ email, password });
-    setLoading(false);
-    if (err) {
-      setError(err.message || "Falha no login");
-      return;
+    try {
+      const { error: err } = await authClient.signIn.email({ email, password });
+      if (err) {
+        setError(err.message || "Falha no login");
+        return;
+      }
+      if (email.includes("motorista")) router.push("/motorista");
+      else if (email.includes("armazem")) router.push("/armazem");
+      else router.push("/torre");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível conectar ao servidor de autenticação",
+      );
+    } finally {
+      setLoading(false);
     }
-    if (email.includes("motorista")) router.push("/motorista");
-    else if (email.includes("armazem")) router.push("/armazem");
-    else router.push("/torre");
   }
 
   return (
