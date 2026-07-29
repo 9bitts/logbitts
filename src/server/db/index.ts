@@ -342,6 +342,116 @@ CREATE TABLE IF NOT EXISTS cycle_count_line (
   qty_counted double precision,
   status text NOT NULL DEFAULT 'pending'
 );
+CREATE TABLE IF NOT EXISTS carrier (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  document text,
+  rntrc text,
+  email text,
+  phone text,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS freight_rate_table (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  carrier_id text REFERENCES carrier(id) ON DELETE SET NULL,
+  name text NOT NULL,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS freight_rate (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  table_id text NOT NULL REFERENCES freight_rate_table(id) ON DELETE CASCADE,
+  origin_state text NOT NULL,
+  dest_state text NOT NULL,
+  origin_zip_prefix text,
+  dest_zip_prefix text,
+  min_weight_kg double precision NOT NULL DEFAULT 0,
+  max_weight_kg double precision NOT NULL DEFAULT 99999,
+  price_per_kg double precision NOT NULL DEFAULT 0,
+  minimum_price double precision NOT NULL DEFAULT 0,
+  fixed_price double precision,
+  transit_days integer DEFAULT 3
+);
+CREATE TABLE IF NOT EXISTS freight_quote (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  carrier_id text REFERENCES carrier(id) ON DELETE SET NULL,
+  table_id text REFERENCES freight_rate_table(id) ON DELETE SET NULL,
+  rate_id text REFERENCES freight_rate(id) ON DELETE SET NULL,
+  delivery_id text REFERENCES delivery(id) ON DELETE SET NULL,
+  origin_state text NOT NULL,
+  dest_state text NOT NULL,
+  origin_zip text,
+  dest_zip text,
+  weight_kg double precision NOT NULL DEFAULT 0,
+  amount double precision NOT NULL,
+  transit_days integer,
+  status text NOT NULL DEFAULT 'open',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS freight_shipment (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  carrier_id text NOT NULL REFERENCES carrier(id) ON DELETE RESTRICT,
+  quote_id text REFERENCES freight_quote(id) ON DELETE SET NULL,
+  delivery_id text REFERENCES delivery(id) ON DELETE SET NULL,
+  route_id text REFERENCES route(id) ON DELETE SET NULL,
+  external_code text,
+  expected_amount double precision NOT NULL DEFAULT 0,
+  status text NOT NULL DEFAULT 'booked',
+  tracking_code text,
+  booked_at timestamptz NOT NULL DEFAULT now(),
+  delivered_at timestamptz,
+  notes text
+);
+CREATE TABLE IF NOT EXISTS cte_document (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  shipment_id text REFERENCES freight_shipment(id) ON DELETE SET NULL,
+  carrier_id text REFERENCES carrier(id) ON DELETE SET NULL,
+  chave text,
+  number text,
+  series text,
+  issue_date text,
+  carrier_document text,
+  freight_amount double precision NOT NULL DEFAULT 0,
+  weight_kg double precision,
+  origin_city text,
+  dest_city text,
+  status text NOT NULL DEFAULT 'imported',
+  expected_amount double precision,
+  variance double precision,
+  notes text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS freight_invoice (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  carrier_id text NOT NULL REFERENCES carrier(id) ON DELETE RESTRICT,
+  number text NOT NULL,
+  issue_date text,
+  total_amount double precision NOT NULL DEFAULT 0,
+  status text NOT NULL DEFAULT 'open',
+  notes text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  reconciled_at timestamptz
+);
+CREATE TABLE IF NOT EXISTS freight_invoice_line (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  invoice_id text NOT NULL REFERENCES freight_invoice(id) ON DELETE CASCADE,
+  cte_id text REFERENCES cte_document(id) ON DELETE SET NULL,
+  shipment_id text REFERENCES freight_shipment(id) ON DELETE SET NULL,
+  description text,
+  amount double precision NOT NULL DEFAULT 0,
+  expected_amount double precision,
+  variance double precision,
+  status text NOT NULL DEFAULT 'pending'
+);
 `;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

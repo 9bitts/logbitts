@@ -37,7 +37,7 @@ export default function LoginPage() {
           </div>
         </div>
         <h1>Entrar</h1>
-        <p>Fase 2 — DMS + WMS. Contas demo do seed.</p>
+        <p>Fase 3 — DMS + WMS + Frete embarcador.</p>
         <div className="field">
           <label>E-mail</label>
           <input

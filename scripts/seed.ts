@@ -398,14 +398,120 @@ async function main() {
     }
   }
 
+  // --- Fase 3 TMS Embarcador ---
+  let [carrierA] = await db
+    .select()
+    .from(schema.carrier)
+    .where(eq(schema.carrier.organizationId, orgId))
+    .limit(1);
+  if (!carrierA) {
+    const carId = id("car");
+    carrierA = {
+      id: carId,
+      organizationId: orgId,
+      name: "TransBrasil Express",
+      document: "12.345.678/0001-90",
+      rntrc: "12345678",
+      email: "ops@transbrasil.demo",
+      phone: "1133334444",
+      active: true,
+      createdAt: new Date(),
+    };
+    await db.insert(schema.carrier).values(carrierA);
+    await db.insert(schema.carrier).values({
+      id: id("car"),
+      organizationId: orgId,
+      name: "RodoSul Logística",
+      document: "98.765.432/0001-10",
+      rntrc: "87654321",
+      email: "frete@rodosul.demo",
+      phone: "1144445555",
+      active: true,
+      createdAt: new Date(),
+    });
+
+    const tableId = id("frt");
+    await db.insert(schema.freightRateTable).values({
+      id: tableId,
+      organizationId: orgId,
+      carrierId: carId,
+      name: "Tabela SP Capital",
+      active: true,
+      createdAt: new Date(),
+    });
+    await db.insert(schema.freightRate).values({
+      id: id("frr"),
+      organizationId: orgId,
+      tableId,
+      originState: "SP",
+      destState: "SP",
+      originZipPrefix: null,
+      destZipPrefix: null,
+      minWeightKg: 0,
+      maxWeightKg: 50,
+      pricePerKg: 3.2,
+      minimumPrice: 28,
+      fixedPrice: null,
+      transitDays: 1,
+    });
+    await db.insert(schema.freightRate).values({
+      id: id("frr"),
+      organizationId: orgId,
+      tableId,
+      originState: "SP",
+      destState: "SP",
+      originZipPrefix: null,
+      destZipPrefix: null,
+      minWeightKg: 50,
+      maxWeightKg: 99999,
+      pricePerKg: 2.1,
+      minimumPrice: 55,
+      fixedPrice: null,
+      transitDays: 2,
+    });
+
+    const [carrierB] = await db
+      .select()
+      .from(schema.carrier)
+      .where(eq(schema.carrier.document, "98.765.432/0001-10"))
+      .limit(1);
+    if (carrierB) {
+      const table2 = id("frt");
+      await db.insert(schema.freightRateTable).values({
+        id: table2,
+        organizationId: orgId,
+        carrierId: carrierB.id,
+        name: "Tabela RodoSul Interior",
+        active: true,
+        createdAt: new Date(),
+      });
+      await db.insert(schema.freightRate).values({
+        id: id("frr"),
+        organizationId: orgId,
+        tableId: table2,
+        originState: "SP",
+        destState: "SP",
+        originZipPrefix: null,
+        destZipPrefix: null,
+        minWeightKg: 0,
+        maxWeightKg: 99999,
+        pricePerKg: 2.8,
+        minimumPrice: 40,
+        fixedPrice: null,
+        transitDays: 2,
+      });
+    }
+  }
+
   console.log(`
-Seed OK (PGlite + WMS Fase 2)
+Seed OK (DMS + WMS + TMS Embarcador)
 
 Despacho:  despacho@logbitts.demo / demo1234
 Armazém:   armazem@logbitts.demo / demo1234
 Motorista: motorista@logbitts.demo / demo1234
 
-Fluxo: Estoque → Ondas → App armazém → Rotas (ready_to_ship)
+Frete: /frete → cotação → embarque → auditoria CT-e → fatura
+Torre: KPIs OTIF / custo-km / divergências
 `);
 }
 

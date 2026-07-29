@@ -1,16 +1,8 @@
-# Logbitts — Fase 2 (DMS + WMS)
+# Logbitts — Fase 3 (DMS + WMS + TMS Embarcador)
 
-Gestão de entregas, rotas, torre, app motorista (PWA) **e WMS essencial** (recebimento, estoque, picking, inventário).
+Gestão de entregas, armazém e **frete embarcador** (cotação, contratação, auditoria CT-e, conciliação).
 
-## Stack
-
-- Next.js (App Router) + TypeScript
-- PostgreSQL via **PGlite embutido** (zero config) ou Neon/Docker
-- Drizzle ORM + Better Auth (multi-tenant)
-- MapLibre + deep link Waze/Google Maps
-- Upload local de POD (`/uploads`)
-
-## Setup rápido
+## Setup
 
 ```bash
 npm install
@@ -26,27 +18,23 @@ npm run dev
 | Armazém | `armazem@logbitts.demo` | `demo1234` |
 | Motorista | `motorista@logbitts.demo` | `demo1234` |
 
-## Fluxo do piloto (Fase 2)
+## Módulos
 
-1. **Estoque** → produtos/endereços (seed já cria CD + SKUs + saldos)  
-2. **Recebimento** (opcional) → conferir ASN → **App armazém** putaway  
-3. **Ondas** → selecionar entregas `pending` → criar → liberar  
-4. **App armazém** (`/armazem`) → picking → entrega vira `ready_to_ship`  
-5. **Rotas** → montar só com `ready_to_ship` → publicar  
-6. **Motorista** → POD em campo  
-7. **Inventário** → contagem cíclica ajusta estoque  
+| Fase | Escopo |
+|------|--------|
+| 1 DMS | Rotas, torre, motorista PWA, POD |
+| 2 WMS | Estoque, recebimento, picking, inventário, gate `ready_to_ship` |
+| 3 TMS Embarcador | Transportadoras, tabelas, cotação, embarques, auditoria CT-e, faturas, KPIs torre |
 
-## Escopo
+## Fluxo frete (Fase 3)
 
-**Inclui:** DMS Fase 1 + WMS (warehouse, product, location, stock, receipt, pick wave, cycle count), gate `ready_to_ship` nas rotas.
+1. **Frete → Transportadoras / Tabelas** (seed já cria 2 carriers + faixas SP)  
+2. **Cotação** a partir de uma entrega → comparar valores  
+3. **Contratar** → embarque com tracking  
+4. **Auditoria CT-e** → importar valor e casar com esperado (±5%)  
+5. **Faturas** → agrupar CT-es e conciliar  
+6. **Torre** → OTIF, custo/km, frete, divergências  
 
-**Fora:** CT-e/MDF-e/CIOT, slotting IA, multi-CD, 3PL, marketplace, Winthor nativo.
+## Fora de escopo (ainda)
 
-## Scripts
-
-| Script | Função |
-|--------|--------|
-| `npm run dev` | Dev server |
-| `npm run db:seed` | Dados demo (DMS + WMS) |
-| `npm run icons` | Ícones PWA |
-| `npm run build` | Build produção |
+Emissão CT-e/MDF-e/CIOT (Fase 4), marketplace, Winthor nativo, slotting IA.

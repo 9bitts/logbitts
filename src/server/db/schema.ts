@@ -489,6 +489,178 @@ export const cycleCountLine = pgTable("cycle_count_line", {
   // pending | counted
 });
 
+/** Phase 3 — TMS Embarcador */
+export const carrier = pgTable("carrier", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  document: text("document"), // CNPJ
+  rntrc: text("rntrc"),
+  email: text("email"),
+  phone: text("phone"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const freightRateTable = pgTable("freight_rate_table", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  carrierId: text("carrier_id").references(() => carrier.id, {
+    onDelete: "set null",
+  }),
+  name: text("name").notNull(),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const freightRate = pgTable("freight_rate", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  tableId: text("table_id")
+    .notNull()
+    .references(() => freightRateTable.id, { onDelete: "cascade" }),
+  originState: text("origin_state").notNull(),
+  destState: text("dest_state").notNull(),
+  originZipPrefix: text("origin_zip_prefix"),
+  destZipPrefix: text("dest_zip_prefix"),
+  minWeightKg: doublePrecision("min_weight_kg").notNull().default(0),
+  maxWeightKg: doublePrecision("max_weight_kg").notNull().default(99999),
+  pricePerKg: doublePrecision("price_per_kg").notNull().default(0),
+  minimumPrice: doublePrecision("minimum_price").notNull().default(0),
+  fixedPrice: doublePrecision("fixed_price"),
+  transitDays: integer("transit_days").default(3),
+});
+
+export const freightQuote = pgTable("freight_quote", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  carrierId: text("carrier_id").references(() => carrier.id, {
+    onDelete: "set null",
+  }),
+  tableId: text("table_id").references(() => freightRateTable.id, {
+    onDelete: "set null",
+  }),
+  rateId: text("rate_id").references(() => freightRate.id, {
+    onDelete: "set null",
+  }),
+  deliveryId: text("delivery_id").references(() => delivery.id, {
+    onDelete: "set null",
+  }),
+  originState: text("origin_state").notNull(),
+  destState: text("dest_state").notNull(),
+  originZip: text("origin_zip"),
+  destZip: text("dest_zip"),
+  weightKg: doublePrecision("weight_kg").notNull().default(0),
+  amount: doublePrecision("amount").notNull(),
+  transitDays: integer("transit_days"),
+  status: text("status").notNull().default("open"),
+  // open | selected | expired
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const freightShipment = pgTable("freight_shipment", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  carrierId: text("carrier_id")
+    .notNull()
+    .references(() => carrier.id, { onDelete: "restrict" }),
+  quoteId: text("quote_id").references(() => freightQuote.id, {
+    onDelete: "set null",
+  }),
+  deliveryId: text("delivery_id").references(() => delivery.id, {
+    onDelete: "set null",
+  }),
+  routeId: text("route_id").references(() => route.id, {
+    onDelete: "set null",
+  }),
+  externalCode: text("external_code"),
+  expectedAmount: doublePrecision("expected_amount").notNull().default(0),
+  status: text("status").notNull().default("booked"),
+  // booked | in_transit | delivered | cancelled
+  trackingCode: text("tracking_code"),
+  bookedAt: timestamp("booked_at").notNull().defaultNow(),
+  deliveredAt: timestamp("delivered_at"),
+  notes: text("notes"),
+});
+
+export const cteDocument = pgTable("cte_document", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  shipmentId: text("shipment_id").references(() => freightShipment.id, {
+    onDelete: "set null",
+  }),
+  carrierId: text("carrier_id").references(() => carrier.id, {
+    onDelete: "set null",
+  }),
+  chave: text("chave"),
+  number: text("number"),
+  series: text("series"),
+  issueDate: text("issue_date"),
+  carrierDocument: text("carrier_document"),
+  freightAmount: doublePrecision("freight_amount").notNull().default(0),
+  weightKg: doublePrecision("weight_kg"),
+  originCity: text("origin_city"),
+  destCity: text("dest_city"),
+  status: text("status").notNull().default("imported"),
+  // imported | matched | mismatch | reconciled
+  expectedAmount: doublePrecision("expected_amount"),
+  variance: doublePrecision("variance"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const freightInvoice = pgTable("freight_invoice", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  carrierId: text("carrier_id")
+    .notNull()
+    .references(() => carrier.id, { onDelete: "restrict" }),
+  number: text("number").notNull(),
+  issueDate: text("issue_date"),
+  totalAmount: doublePrecision("total_amount").notNull().default(0),
+  status: text("status").notNull().default("open"),
+  // open | reconciled | disputed | paid
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  reconciledAt: timestamp("reconciled_at"),
+});
+
+export const freightInvoiceLine = pgTable("freight_invoice_line", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  invoiceId: text("invoice_id")
+    .notNull()
+    .references(() => freightInvoice.id, { onDelete: "cascade" }),
+  cteId: text("cte_id").references(() => cteDocument.id, {
+    onDelete: "set null",
+  }),
+  shipmentId: text("shipment_id").references(() => freightShipment.id, {
+    onDelete: "set null",
+  }),
+  description: text("description"),
+  amount: doublePrecision("amount").notNull().default(0),
+  expectedAmount: doublePrecision("expected_amount"),
+  variance: doublePrecision("variance"),
+  status: text("status").notNull().default("pending"),
+  // pending | ok | mismatch
+});
+
 export type Organization = typeof organization.$inferSelect;
 export type Customer = typeof customer.$inferSelect;
 export type Driver = typeof driver.$inferSelect;
@@ -500,4 +672,5 @@ export type Proof = typeof proof.$inferSelect;
 export type Product = typeof product.$inferSelect;
 export type Warehouse = typeof warehouse.$inferSelect;
 export type Location = typeof location.$inferSelect;
+export type Carrier = typeof carrier.$inferSelect;
 export type MemberRole = "owner" | "dispatcher" | "driver" | "warehouse";

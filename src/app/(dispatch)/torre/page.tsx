@@ -2,13 +2,21 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { RouteMap } from "@/components/route-map";
+import Link from "next/link";
 
 type TowerRoute = {
   id: string;
   name: string;
   status: string;
   driver: { name: string } | null;
-  progress: { done: number; total: number };
+  progress: { done: number; total: number; delivered: number; failed: number };
+  metrics: {
+    otifPct: number | null;
+    km: number;
+    freightCost: number;
+    costPerKm: number | null;
+    slaRisk: boolean;
+  };
   stops: {
     id: string;
     sequence: number;
@@ -20,9 +28,21 @@ type TowerRoute = {
   }[];
 };
 
+type Kpis = {
+  otifPct: number | null;
+  routesCount: number;
+  stopsTotal: number;
+  stopsDelivered: number;
+  openShipments: number;
+  mismatchCtes: number;
+  freightSpend: number;
+  avgCostPerKm: number | null;
+};
+
 export default function TorrePage() {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [routes, setRoutes] = useState<TowerRoute[]>([]);
+  const [kpis, setKpis] = useState<Kpis | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -30,6 +50,7 @@ export default function TorrePage() {
     if (!res.ok) return;
     const data = await res.json();
     setRoutes(data.routes || []);
+    setKpis(data.kpis || null);
     if (!selected && data.routes?.[0]) setSelected(data.routes[0].id);
   }, [date, selected]);
 
@@ -60,7 +81,9 @@ export default function TorrePage() {
   return (
     <div>
       <h1 className="page-title">Torre de controle</h1>
-      <p className="page-sub">Acompanhe rotas do dia — atualiza a cada 20s.</p>
+      <p className="page-sub">
+        Operação do dia + KPIs embarcador (OTIF, custo/km, frete, CT-e).
+      </p>
       <div className="toolbar">
         <input
           type="date"
@@ -70,7 +93,53 @@ export default function TorrePage() {
         <button type="button" className="btn btn-outline" onClick={load}>
           Atualizar
         </button>
+        <Link href="/frete" className="btn btn-accent">
+          Frete / auditoria
+        </Link>
       </div>
+
+      {kpis ? (
+        <div className="grid-3" style={{ marginBottom: "1rem" }}>
+          <div className="panel">
+            <div className="muted" style={{ fontSize: "0.75rem" }}>
+              OTIF do dia
+            </div>
+            <strong style={{ fontSize: "1.6rem" }}>
+              {kpis.otifPct != null ? `${kpis.otifPct}%` : "—"}
+            </strong>
+            <div className="muted">
+              {kpis.stopsDelivered}/{kpis.stopsTotal} paradas
+            </div>
+          </div>
+          <div className="panel">
+            <div className="muted" style={{ fontSize: "0.75rem" }}>
+              Frete contratado
+            </div>
+            <strong style={{ fontSize: "1.6rem" }}>
+              R$ {kpis.freightSpend.toFixed(2)}
+            </strong>
+            <div className="muted">
+              Custo/km médio:{" "}
+              {kpis.avgCostPerKm != null ? `R$ ${kpis.avgCostPerKm}` : "—"}
+            </div>
+          </div>
+          <div className="panel">
+            <div className="muted" style={{ fontSize: "0.75rem" }}>
+              SLA / auditoria
+            </div>
+            <strong style={{ fontSize: "1.6rem" }}>
+              {kpis.openShipments} emb.
+            </strong>
+            <div className="muted">
+              CT-e divergentes:{" "}
+              <span className={kpis.mismatchCtes ? "badge badge-bad" : "badge"}>
+                {kpis.mismatchCtes}
+              </span>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid-2">
         <div className="panel">
           <table className="table">
@@ -78,8 +147,10 @@ export default function TorrePage() {
               <tr>
                 <th>Rota</th>
                 <th>Motorista</th>
+                <th>OTIF</th>
+                <th>Km</th>
+                <th>R$/km</th>
                 <th>Status</th>
-                <th>Progresso</th>
               </tr>
             </thead>
             <tbody>
@@ -90,23 +161,38 @@ export default function TorrePage() {
                   style={{
                     cursor: "pointer",
                     background:
-                      current?.id === r.id ? "rgba(15,118,110,0.08)" : undefined,
+                      current?.id === r.id
+                        ? "rgba(15,118,110,0.08)"
+                        : undefined,
                   }}
                 >
-                  <td>{r.name}</td>
+                  <td>
+                    {r.name}
+                    {r.metrics.slaRisk ? (
+                      <span className="badge badge-bad" style={{ marginLeft: 6 }}>
+                        SLA
+                      </span>
+                    ) : null}
+                  </td>
                   <td>{r.driver?.name || "—"}</td>
                   <td>
-                    <span className={badge(r.status)}>{r.status}</span>
+                    {r.metrics.otifPct != null ? `${r.metrics.otifPct}%` : "—"}
+                  </td>
+                  <td>{r.metrics.km}</td>
+                  <td>
+                    {r.metrics.costPerKm != null
+                      ? r.metrics.costPerKm.toFixed(2)
+                      : "—"}
                   </td>
                   <td>
-                    {r.progress.done}/{r.progress.total}
+                    <span className={badge(r.status)}>{r.status}</span>
                   </td>
                 </tr>
               ))}
               {!routes.length ? (
                 <tr>
-                  <td colSpan={4} className="muted">
-                    Nenhuma rota neste dia. Monte em Rotas.
+                  <td colSpan={6} className="muted">
+                    Nenhuma rota neste dia.
                   </td>
                 </tr>
               ) : null}
@@ -118,6 +204,10 @@ export default function TorrePage() {
           {current ? (
             <div style={{ marginTop: "0.75rem" }}>
               <strong>{current.name}</strong>
+              <div className="muted" style={{ fontSize: "0.85rem" }}>
+                Frete rota: R$ {current.metrics.freightCost.toFixed(2)} ·{" "}
+                {current.progress.delivered} ok / {current.progress.failed} falha
+              </div>
               <ul style={{ paddingLeft: "1.1rem", margin: "0.5rem 0 0" }}>
                 {current.stops.map((s) => (
                   <li key={s.id} className="muted" style={{ marginBottom: 4 }}>
