@@ -1,37 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { getDb, schema } from "@/server/db";
 import { json, requireDispatcher } from "@/server/session";
-import { id } from "@/server/lib/ids";
-
-const CATALOG = [
-  { key: "winthor", name: "TOTVS Winthor (ERP)" },
-  { key: "sap", name: "SAP (pedido / NF)" },
-  { key: "generic_rest", name: "REST genérico (webhook)" },
-  { key: "focus_nfe", name: "Focus NFe / parceiro fiscal" },
-  { key: "frete_marketplace", name: "Marketplace de frete" },
-];
-
-export async function ensureConnectors(organizationId: string) {
-  const db = await getDb();
-  const existing = await db
-    .select()
-    .from(schema.integrationConnector)
-    .where(eq(schema.integrationConnector.organizationId, organizationId));
-  const have = new Set(existing.map((e) => e.key));
-  for (const c of CATALOG) {
-    if (have.has(c.key)) continue;
-    await db.insert(schema.integrationConnector).values({
-      id: id("icn"),
-      organizationId,
-      key: c.key,
-      name: c.name,
-      status: c.key === "focus_nfe" ? "configured" : "available",
-      configJson: null,
-      lastSyncAt: null,
-      createdAt: new Date(),
-    });
-  }
-}
+import { ensureConnectors } from "@/server/integrations/catalog";
 
 export async function GET() {
   try {
@@ -65,6 +35,7 @@ export async function POST(req: Request) {
           configJson:
             body.config != null ? JSON.stringify(body.config) : undefined,
           lastSyncAt: body.markSync ? new Date() : undefined,
+          lastError: null,
         })
         .where(
           and(
@@ -76,21 +47,18 @@ export async function POST(req: Request) {
     }
 
     if (body.action === "sync_stub") {
-      await db
-        .update(schema.integrationConnector)
-        .set({
-          status: "connected",
-          lastSyncAt: new Date(),
-        })
-        .where(
-          and(
-            eq(schema.integrationConnector.id, body.id),
-            eq(schema.integrationConnector.organizationId, ctx.organizationId),
-          ),
-        );
+      // backward-compatible: real sync for winthor/sap/rest
+      const { runConnectorSync } = await import("@/server/integrations/sync");
+      const keyOrId = body.key || body.id;
+      const result = await runConnectorSync(
+        ctx.organizationId,
+        keyOrId,
+        "pull",
+      );
       return json({
         ok: true,
-        message: "Sync stub OK — conector marcado como connected",
+        message: result.run?.message || "Sync OK",
+        ...result,
       });
     }
 

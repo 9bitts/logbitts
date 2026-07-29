@@ -9,6 +9,7 @@ type Connector = {
   name: string;
   status: string;
   lastSyncAt: string | null;
+  lastError: string | null;
 };
 
 export default function IntegracoesPage() {
@@ -35,15 +36,26 @@ export default function IntegracoesPage() {
         config: { mode: "stub" },
       }),
     });
-    setMsg("Configurado (stub)");
+    setMsg("Configurado");
     load();
   }
 
-  async function sync(id: string) {
+  async function sync(c: Connector) {
+    if (["winthor", "sap", "generic_rest"].includes(c.key)) {
+      const res = await fetch("/api/integrations/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: c.key }),
+      });
+      const data = await res.json();
+      setMsg(data.run?.message || data.message || data.error || "OK");
+      load();
+      return;
+    }
     const res = await fetch("/api/integrations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "sync_stub", id }),
+      body: JSON.stringify({ action: "sync_stub", id: c.id }),
     });
     const data = await res.json();
     setMsg(data.message || "OK");
@@ -53,8 +65,11 @@ export default function IntegracoesPage() {
   return (
     <div>
       <div className="toolbar">
-        <Link href="/patio" className="ghost-link">
-          ← Pátio
+        <Link href="/torre" className="ghost-link">
+          ← Torre
+        </Link>
+        <Link href="/integracoes/winthor" className="btn btn-accent">
+          Winthor
         </Link>
         <Link href="/frete/emissao/config" className="btn btn-outline">
           Parceiro fiscal
@@ -62,8 +77,8 @@ export default function IntegracoesPage() {
       </div>
       <h1 className="page-title">Integrações</h1>
       <p className="page-sub">
-        Catálogo Open Platform (stubs). Winthor/SAP entram como conectores
-        versionados — sem clonar ERP.
+        Open Platform: ERP (Winthor) sincroniza pedidos → entregas. Sem clonar o
+        ERP.
       </p>
       {msg ? <p className="muted">{msg}</p> : null}
       <div className="panel">
@@ -82,6 +97,11 @@ export default function IntegracoesPage() {
                 <td>
                   <strong>{c.name}</strong>
                   <div className="muted">{c.key}</div>
+                  {c.lastError ? (
+                    <div className="muted" style={{ color: "var(--bad)" }}>
+                      {c.lastError}
+                    </div>
+                  ) : null}
                 </td>
                 <td>
                   <span
@@ -102,6 +122,14 @@ export default function IntegracoesPage() {
                     : "—"}
                 </td>
                 <td className="toolbar">
+                  {c.key === "winthor" ? (
+                    <Link
+                      href="/integracoes/winthor"
+                      className="btn btn-outline"
+                    >
+                      Abrir
+                    </Link>
+                  ) : null}
                   {c.status === "available" ? (
                     <button
                       type="button"
@@ -115,9 +143,9 @@ export default function IntegracoesPage() {
                     <button
                       type="button"
                       className="btn btn-accent"
-                      onClick={() => sync(c.id)}
+                      onClick={() => sync(c)}
                     >
-                      Sync stub
+                      Sync
                     </button>
                   ) : null}
                 </td>

@@ -44,6 +44,9 @@ type Kpis = {
   yardAppointments: number;
   vehiclesOnSite: number;
   avgYardWaitMin: number | null;
+  erpDeliveriesImported: number;
+  lastErpSyncAt: string | null;
+  lastErpSyncStatus: string | null;
 };
 
 export default function TorrePage() {
@@ -199,6 +202,14 @@ export default function TorrePage() {
             </strong>
             <div className="muted">
               Erros: {kpis.fiscalErrors}
+              {" · "}
+              ERP: +{kpis.erpDeliveriesImported}
+              {kpis.lastErpSyncStatus ? (
+                <>
+                  {" "}
+                  <span className="badge">{kpis.lastErpSyncStatus}</span>
+                </>
+              ) : null}
             </div>
           </div>
         </div>

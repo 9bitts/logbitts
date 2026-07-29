@@ -11,6 +11,7 @@ const links = [
   { href: "/estoque", label: "Estoque" },
   { href: "/patio", label: "Pátio" },
   { href: "/frete", label: "Frete" },
+  { href: "/integracoes", label: "ERP" },
   { href: "/cadastros", label: "Cadastros" },
 ];
 

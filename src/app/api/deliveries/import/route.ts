@@ -103,6 +103,7 @@ export async function POST(req: Request) {
             windowStart: pick(row, ["window_start"]) || null,
             windowEnd: pick(row, ["window_end"]) || null,
             notes: null,
+            erpKey: null,
             createdAt: new Date(),
           };
           await db.insert(schema.customer).values(customer);
@@ -126,6 +127,8 @@ export async function POST(req: Request) {
           notes: notes || null,
           createdAt: new Date(),
           updatedAt: new Date(),
+          source: "csv",
+          erpKey: externalCode || null,
         });
 
         const sku = pick(row, ["sku", "produto_sku"]);

@@ -337,6 +337,7 @@ async function main() {
         windowStart: "08:00",
         windowEnd: "18:00",
         notes: null,
+        erpKey: null,
         createdAt: new Date(),
       });
       const delId = id("del");
@@ -355,6 +356,8 @@ async function main() {
         notes: null,
         createdAt: new Date(),
         updatedAt: new Date(),
+        source: "manual",
+        erpKey: null,
       });
       await db.insert(schema.deliveryLine).values({
         id: id("dln"),
@@ -606,11 +609,35 @@ async function main() {
     .limit(1);
   if (!existingConnectors.length) {
     const catalog = [
-      { key: "winthor", name: "TOTVS Winthor (ERP)", status: "available" },
-      { key: "sap", name: "SAP (pedido / NF)", status: "available" },
-      { key: "generic_rest", name: "REST genérico (webhook)", status: "available" },
-      { key: "focus_nfe", name: "Focus NFe / parceiro fiscal", status: "configured" },
-      { key: "frete_marketplace", name: "Marketplace de frete", status: "available" },
+      {
+        key: "winthor",
+        name: "TOTVS Winthor (ERP)",
+        status: "configured",
+        configJson: JSON.stringify({
+          mode: "mock",
+          webhookSecret: "logbitts-demo-webhook",
+          companyCode: "DEMO",
+        }),
+      },
+      { key: "sap", name: "SAP (pedido / NF)", status: "available", configJson: null },
+      {
+        key: "generic_rest",
+        name: "REST genérico (webhook)",
+        status: "available",
+        configJson: null,
+      },
+      {
+        key: "focus_nfe",
+        name: "Focus NFe / parceiro fiscal",
+        status: "configured",
+        configJson: null,
+      },
+      {
+        key: "frete_marketplace",
+        name: "Marketplace de frete",
+        status: "available",
+        configJson: null,
+      },
     ];
     for (const c of catalog) {
       await db.insert(schema.integrationConnector).values({
@@ -619,22 +646,23 @@ async function main() {
         key: c.key,
         name: c.name,
         status: c.status,
-        configJson: null,
+        configJson: c.configJson,
         lastSyncAt: null,
+        lastError: null,
         createdAt: new Date(),
       });
     }
   }
 
   console.log(`
-Seed OK (DMS + WMS + TMS + Fiscal + YMS)
+Seed OK (DMS + WMS + TMS + Fiscal + YMS + ERP)
 
 Despacho:  despacho@logbitts.demo / demo1234
 Armazém:   armazem@logbitts.demo / demo1234
 Motorista: motorista@logbitts.demo / demo1234
 
+ERP: /integracoes/winthor → Sync agora → Entregas
 Pátio: /patio → docks → agenda → gate
-Integrações: /integracoes
 `);
 }
 

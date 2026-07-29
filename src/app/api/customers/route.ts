@@ -41,6 +41,7 @@ export async function POST(req: Request) {
       windowStart: body.windowStart || null,
       windowEnd: body.windowEnd || null,
       notes: body.notes || null,
+      erpKey: body.erpKey || null,
       createdAt: new Date(),
     };
     if (!row.name || !row.address || !row.city || !row.state || !row.zip) {

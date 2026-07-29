@@ -102,6 +102,7 @@ export const customer = pgTable("customer", {
   windowStart: text("window_start"),
   windowEnd: text("window_end"),
   notes: text("notes"),
+  erpKey: text("erp_key"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -150,6 +151,9 @@ export const delivery = pgTable("delivery", {
   notes: text("notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  source: text("source").notNull().default("manual"),
+  // manual | csv | erp
+  erpKey: text("erp_key"),
 });
 
 export const route = pgTable("route", {
@@ -863,7 +867,30 @@ export const integrationConnector = pgTable("integration_connector", {
   // available | configured | connected | error
   configJson: text("config_json"),
   lastSyncAt: timestamp("last_sync_at"),
+  lastError: text("last_error"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const integrationSyncRun = pgTable("integration_sync_run", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  connectorId: text("connector_id")
+    .notNull()
+    .references(() => integrationConnector.id, { onDelete: "cascade" }),
+  direction: text("direction").notNull().default("pull"),
+  // pull | webhook | push
+  status: text("status").notNull().default("running"),
+  // running | success | partial | error
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  finishedAt: timestamp("finished_at"),
+  createdCustomers: integer("created_customers").notNull().default(0),
+  createdDeliveries: integer("created_deliveries").notNull().default(0),
+  skipped: integer("skipped").notNull().default(0),
+  errors: integer("errors").notNull().default(0),
+  message: text("message"),
+  detailJson: text("detail_json"),
 });
 
 export type Organization = typeof organization.$inferSelect;
@@ -881,4 +908,5 @@ export type Carrier = typeof carrier.$inferSelect;
 export type FiscalEmission = typeof fiscalEmission.$inferSelect;
 export type Dock = typeof dock.$inferSelect;
 export type YardAppointment = typeof yardAppointment.$inferSelect;
+export type IntegrationSyncRun = typeof integrationSyncRun.$inferSelect;
 export type MemberRole = "owner" | "dispatcher" | "driver" | "warehouse";

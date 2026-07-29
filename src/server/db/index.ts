@@ -587,6 +587,25 @@ CREATE TABLE IF NOT EXISTS integration_connector (
   last_sync_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+CREATE TABLE IF NOT EXISTS integration_sync_run (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  connector_id text NOT NULL REFERENCES integration_connector(id) ON DELETE CASCADE,
+  direction text NOT NULL DEFAULT 'pull',
+  status text NOT NULL DEFAULT 'running',
+  started_at timestamptz NOT NULL DEFAULT now(),
+  finished_at timestamptz,
+  created_customers integer NOT NULL DEFAULT 0,
+  created_deliveries integer NOT NULL DEFAULT 0,
+  skipped integer NOT NULL DEFAULT 0,
+  errors integer NOT NULL DEFAULT 0,
+  message text,
+  detail_json text
+);
+ALTER TABLE integration_connector ADD COLUMN IF NOT EXISTS last_error text;
+ALTER TABLE delivery ADD COLUMN IF NOT EXISTS source text DEFAULT 'manual';
+ALTER TABLE delivery ADD COLUMN IF NOT EXISTS erp_key text;
+ALTER TABLE customer ADD COLUMN IF NOT EXISTS erp_key text;
 `;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

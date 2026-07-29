@@ -1,6 +1,6 @@
-# Logbitts — Fase 5 (DMS + WMS + TMS + Fiscal + YMS)
+# Logbitts — Fase 6 (DMS + WMS + TMS + Fiscal + YMS + ERP)
 
-Gestão de entregas, armazém, frete, emissão fiscal e **pátio (YMS)** — docks, agenda e gate.
+Gestão logística modular com **integração ERP** (Winthor mock/HTTP → entregas).
 
 ## Setup
 
@@ -26,16 +26,16 @@ npm run dev
 | 2 WMS | Estoque, recebimento, picking, inventário |
 | 3 TMS Embarcador | Cotação, embarques, auditoria CT-e, faturas |
 | 4 Fiscal | Emissão CT-e / MDF-e / CIOT via adapter |
-| 5 YMS + Open Platform | Docks, agenda, gate; catálogo de integrações (stubs) |
+| 5 YMS | Docks, agenda, gate; catálogo de integrações |
+| 6 ERP | Sync Winthor/REST → clientes + entregas + histórico |
 
-## Fluxo pátio (Fase 5)
+## Fluxo ERP (Fase 6)
 
-1. **Pátio → Docks** — cadastro (seed cria D01–D03)  
-2. **Agenda** — janela inbound/outbound + placa/transportadora  
-3. **Gate** — check-in → atribuir dock → checkout (mede espera)  
-4. **Torre** — docks livres, veículos no pátio, espera média  
-5. **Integrações** (`/integracoes`) — Winthor/SAP/REST/fiscal (stubs)
+1. **ERP → Winthor** (`/integracoes/winthor`) — modo `mock` ou `http`  
+2. **Sync agora** — importa pedidos idempotentes (por `orderNumber`)  
+3. **Entregas** — pedidos aparecem prontos para WMS/DMS  
+4. **Webhook** — `POST /api/integrations/webhook?org=...&key=winthor` + `X-Logbitts-Secret`  
 
 ## Fora de escopo (ainda)
 
-Multi-CD / 3PL completo, BI enterprise, marketplace de cargas real, Winthor nativo (além do stub), slotting IA, certificado A1/A3 na SEFAZ.
+Multi-CD / 3PL, BI enterprise, marketplace de cargas, slotting IA, certificado A1/A3 na SEFAZ, API Winthor proprietária oficial (usa middleware HTTP).

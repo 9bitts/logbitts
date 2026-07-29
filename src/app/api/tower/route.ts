@@ -180,6 +180,17 @@ export async function GET(req: Request) {
               withWait.length,
           );
 
+    const syncRuns = await db
+      .select()
+      .from(schema.integrationSyncRun)
+      .where(eq(schema.integrationSyncRun.organizationId, ctx.organizationId));
+    const erpDeliveriesToday = syncRuns
+      .filter((r) => r.status === "success" || r.status === "partial")
+      .reduce((s, r) => s + (r.createdDeliveries || 0), 0);
+    const lastErpSync = syncRuns.sort(
+      (a, b) => b.startedAt.getTime() - a.startedAt.getTime(),
+    )[0];
+
     return json({
       date,
       routes: payload,
@@ -198,6 +209,9 @@ export async function GET(req: Request) {
         yardAppointments: apptsToday.length,
         vehiclesOnSite: onSiteVisits.length,
         avgYardWaitMin: avgYardWait,
+        erpDeliveriesImported: erpDeliveriesToday,
+        lastErpSyncAt: lastErpSync?.startedAt?.toISOString() || null,
+        lastErpSyncStatus: lastErpSync?.status || null,
         avgCostPerKm: (() => {
           const withCost = payload.filter(
             (r) => r.metrics.costPerKm != null && r.metrics.km > 0,

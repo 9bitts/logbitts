@@ -3,7 +3,7 @@ import { getSessionCookie } from "better-auth/cookies";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const publicPaths = ["/login", "/api/auth", "/manifest.webmanifest", "/sw.js"];
+  const publicPaths = ["/login", "/api/auth", "/api/integrations/webhook", "/manifest.webmanifest", "/sw.js"];
   if (
     publicPaths.some((p) => pathname.startsWith(p)) ||
     pathname.startsWith("/icon") ||
