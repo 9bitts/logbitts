@@ -8,6 +8,7 @@ const links = [
   { href: "/torre", label: "Torre" },
   { href: "/rotas", label: "Rotas" },
   { href: "/entregas", label: "Entregas" },
+  { href: "/estoque", label: "Estoque" },
   { href: "/cadastros", label: "Cadastros" },
 ];
 
@@ -45,6 +46,9 @@ export function DispatchShell({
           ))}
         </nav>
         <div className="header-right">
+          <Link href="/armazem" className="ghost-link">
+            App armazém
+          </Link>
           <Link href="/motorista" className="ghost-link">
             App motorista
           </Link>

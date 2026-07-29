@@ -77,7 +77,7 @@ export const member = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    role: text("role").notNull(), // owner | dispatcher | driver
+    role: text("role").notNull(), // owner | dispatcher | driver | warehouse
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [uniqueIndex("member_org_user").on(t.organizationId, t.userId)],
@@ -142,7 +142,7 @@ export const delivery = pgTable("delivery", {
   externalCode: text("external_code"),
   invoiceNumber: text("invoice_number"),
   status: text("status").notNull().default("pending"),
-  // pending | assigned | in_transit | delivered | failed | cancelled
+  // pending | picking | ready_to_ship | assigned | in_transit | delivered | failed | cancelled
   weightKg: doublePrecision("weight_kg").default(0),
   volumeM3: doublePrecision("volume_m3").default(0),
   packages: integer("packages").default(1),
@@ -258,12 +258,236 @@ export const stopRelations = relations(stop, ({ one, many }) => ({
   proofs: many(proof),
 }));
 
-export const deliveryRelations = relations(delivery, ({ one }) => ({
+export const deliveryRelations = relations(delivery, ({ one, many }) => ({
   customer: one(customer, {
     fields: [delivery.customerId],
     references: [customer.id],
   }),
+  lines: many(deliveryLine),
 }));
+
+export const warehouse = pgTable("warehouse", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  address: text("address"),
+  lat: doublePrecision("lat"),
+  lng: doublePrecision("lng"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const product = pgTable(
+  "product",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    sku: text("sku").notNull(),
+    name: text("name").notNull(),
+    barcode: text("barcode"),
+    unit: text("unit").notNull().default("UN"),
+    weightKg: doublePrecision("weight_kg").default(0),
+    volumeM3: doublePrecision("volume_m3").default(0),
+    active: boolean("active").notNull().default(true),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("product_org_sku").on(t.organizationId, t.sku)],
+);
+
+export const location = pgTable(
+  "location",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    warehouseId: text("warehouse_id")
+      .notNull()
+      .references(() => warehouse.id, { onDelete: "cascade" }),
+    code: text("code").notNull(),
+    type: text("type").notNull().default("storage"),
+    // receiving | storage | picking | shipping
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("location_wh_code").on(t.warehouseId, t.code)],
+);
+
+export const stockLevel = pgTable(
+  "stock_level",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    productId: text("product_id")
+      .notNull()
+      .references(() => product.id, { onDelete: "cascade" }),
+    locationId: text("location_id")
+      .notNull()
+      .references(() => location.id, { onDelete: "cascade" }),
+    qty: doublePrecision("qty").notNull().default(0),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("stock_product_location").on(t.productId, t.locationId)],
+);
+
+export const stockMovement = pgTable("stock_movement", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  productId: text("product_id")
+    .notNull()
+    .references(() => product.id, { onDelete: "restrict" }),
+  locationId: text("location_id").references(() => location.id, {
+    onDelete: "set null",
+  }),
+  type: text("type").notNull(),
+  // receipt | putaway | pick | adjust | cycle
+  qty: doublePrecision("qty").notNull(),
+  refType: text("ref_type"),
+  refId: text("ref_id"),
+  userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const receipt = pgTable("receipt", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  warehouseId: text("warehouse_id")
+    .notNull()
+    .references(() => warehouse.id, { onDelete: "cascade" }),
+  code: text("code"),
+  supplier: text("supplier"),
+  status: text("status").notNull().default("open"),
+  // open | receiving | closed
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  closedAt: timestamp("closed_at"),
+});
+
+export const receiptLine = pgTable("receipt_line", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  receiptId: text("receipt_id")
+    .notNull()
+    .references(() => receipt.id, { onDelete: "cascade" }),
+  productId: text("product_id")
+    .notNull()
+    .references(() => product.id, { onDelete: "restrict" }),
+  qtyExpected: doublePrecision("qty_expected").notNull().default(0),
+  qtyReceived: doublePrecision("qty_received").notNull().default(0),
+  putawayLocationId: text("putaway_location_id").references(() => location.id, {
+    onDelete: "set null",
+  }),
+  status: text("status").notNull().default("pending"),
+  // pending | received | putaway
+});
+
+export const deliveryLine = pgTable("delivery_line", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  deliveryId: text("delivery_id")
+    .notNull()
+    .references(() => delivery.id, { onDelete: "cascade" }),
+  productId: text("product_id")
+    .notNull()
+    .references(() => product.id, { onDelete: "restrict" }),
+  qty: doublePrecision("qty").notNull().default(1),
+  qtyPicked: doublePrecision("qty_picked").notNull().default(0),
+});
+
+export const pickWave = pgTable("pick_wave", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  warehouseId: text("warehouse_id")
+    .notNull()
+    .references(() => warehouse.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  waveDate: text("wave_date").notNull(),
+  status: text("status").notNull().default("draft"),
+  // draft | released | done
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  releasedAt: timestamp("released_at"),
+  completedAt: timestamp("completed_at"),
+});
+
+export const pickTask = pgTable("pick_task", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  waveId: text("wave_id")
+    .notNull()
+    .references(() => pickWave.id, { onDelete: "cascade" }),
+  deliveryId: text("delivery_id")
+    .notNull()
+    .references(() => delivery.id, { onDelete: "cascade" }),
+  deliveryLineId: text("delivery_line_id").references(() => deliveryLine.id, {
+    onDelete: "set null",
+  }),
+  productId: text("product_id")
+    .notNull()
+    .references(() => product.id, { onDelete: "restrict" }),
+  fromLocationId: text("from_location_id").references(() => location.id, {
+    onDelete: "set null",
+  }),
+  qty: doublePrecision("qty").notNull(),
+  qtyPicked: doublePrecision("qty_picked").notNull().default(0),
+  status: text("status").notNull().default("pending"),
+  // pending | done | cancelled
+  assignedUserId: text("assigned_user_id").references(() => user.id, {
+    onDelete: "set null",
+  }),
+  completedAt: timestamp("completed_at"),
+});
+
+export const cycleCount = pgTable("cycle_count", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  warehouseId: text("warehouse_id")
+    .notNull()
+    .references(() => warehouse.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  status: text("status").notNull().default("open"),
+  // open | done
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const cycleCountLine = pgTable("cycle_count_line", {
+  id: text("id").primaryKey(),
+  organizationId: text("organization_id")
+    .notNull()
+    .references(() => organization.id, { onDelete: "cascade" }),
+  cycleCountId: text("cycle_count_id")
+    .notNull()
+    .references(() => cycleCount.id, { onDelete: "cascade" }),
+  productId: text("product_id")
+    .notNull()
+    .references(() => product.id, { onDelete: "restrict" }),
+  locationId: text("location_id")
+    .notNull()
+    .references(() => location.id, { onDelete: "restrict" }),
+  qtySystem: doublePrecision("qty_system").notNull().default(0),
+  qtyCounted: doublePrecision("qty_counted"),
+  status: text("status").notNull().default("pending"),
+  // pending | counted
+});
 
 export type Organization = typeof organization.$inferSelect;
 export type Customer = typeof customer.$inferSelect;
@@ -273,4 +497,7 @@ export type Delivery = typeof delivery.$inferSelect;
 export type Route = typeof route.$inferSelect;
 export type Stop = typeof stop.$inferSelect;
 export type Proof = typeof proof.$inferSelect;
-export type MemberRole = "owner" | "dispatcher" | "driver";
+export type Product = typeof product.$inferSelect;
+export type Warehouse = typeof warehouse.$inferSelect;
+export type Location = typeof location.$inferSelect;
+export type MemberRole = "owner" | "dispatcher" | "driver" | "warehouse";

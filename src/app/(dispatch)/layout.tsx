@@ -24,6 +24,9 @@ export default async function DispatchLayout({
   if (membership?.role === "driver") {
     redirect("/motorista");
   }
+  if (membership?.role === "warehouse") {
+    redirect("/armazem");
+  }
 
   let orgName = "Logbitts";
   if (membership) {

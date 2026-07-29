@@ -22,6 +22,7 @@ export default function LoginPage() {
       return;
     }
     if (email.includes("motorista")) router.push("/motorista");
+    else if (email.includes("armazem")) router.push("/armazem");
     else router.push("/torre");
   }
 
@@ -36,7 +37,7 @@ export default function LoginPage() {
           </div>
         </div>
         <h1>Entrar</h1>
-        <p>Despacho ou motorista — use as contas demo do seed.</p>
+        <p>Fase 2 — DMS + WMS. Contas demo do seed.</p>
         <div className="field">
           <label>E-mail</label>
           <input
@@ -63,6 +64,8 @@ export default function LoginPage() {
         </button>
         <p className="muted" style={{ marginTop: "1rem", fontSize: "0.85rem" }}>
           despacho@logbitts.demo / demo1234
+          <br />
+          armazem@logbitts.demo / demo1234
           <br />
           motorista@logbitts.demo / demo1234
         </p>

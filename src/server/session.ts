@@ -69,6 +69,16 @@ export async function requireSession(): Promise<SessionContext> {
 
 export async function requireDispatcher() {
   const ctx = await requireSession();
+  if (ctx.role === "driver" || ctx.role === "warehouse") {
+    throw new Response(JSON.stringify({ error: "Sem permissão" }), {
+      status: 403,
+    });
+  }
+  return ctx;
+}
+
+export async function requireWarehouse() {
+  const ctx = await requireSession();
   if (ctx.role === "driver") {
     throw new Response(JSON.stringify({ error: "Sem permissão" }), {
       status: 403,

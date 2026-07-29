@@ -134,10 +134,23 @@ export async function POST(req: Request) {
           ),
         );
 
+      const eligible = deliveries.filter(
+        (d) => d.delivery.status === "ready_to_ship",
+      );
+      if (!eligible.length) {
+        return json(
+          {
+            error:
+              "Nenhuma entrega ready_to_ship. Separe no WMS (ondas) antes de montar a rota.",
+          },
+          400,
+        );
+      }
+
       const order =
         body.optimize !== false
           ? optimizeSequence(
-              deliveries.map((d) => ({
+              eligible.map((d) => ({
                 id: d.delivery.id,
                 lat: d.customer.lat ?? 0,
                 lng: d.customer.lng ?? 0,
@@ -147,11 +160,11 @@ export async function POST(req: Request) {
               })),
               { lat: routeRow.depotLat!, lng: routeRow.depotLng! },
             )
-          : deliveryIds;
+          : eligible.map((d) => d.delivery.id);
 
       let seq = 1;
       for (const deliveryId of order) {
-        const found = deliveries.find((d) => d.delivery.id === deliveryId);
+        const found = eligible.find((d) => d.delivery.id === deliveryId);
         if (!found) continue;
         await db.insert(schema.stop).values({
           id: id("stp"),
@@ -252,17 +265,30 @@ export async function PATCH(req: Request) {
         );
     } else if (action === "addStops") {
       const deliveryIds: string[] = body.deliveryIds || [];
+      const ready = await db
+        .select()
+        .from(schema.delivery)
+        .where(
+          and(
+            eq(schema.delivery.organizationId, ctx.organizationId),
+            inArray(schema.delivery.id, deliveryIds),
+            eq(schema.delivery.status, "ready_to_ship"),
+          ),
+        );
+      if (!ready.length) {
+        return json({ error: "Só entregas ready_to_ship podem entrar na rota" }, 400);
+      }
       const existing = await db
         .select()
         .from(schema.stop)
         .where(eq(schema.stop.routeId, body.id));
       let seq = existing.length + 1;
-      for (const deliveryId of deliveryIds) {
+      for (const del of ready) {
         await db.insert(schema.stop).values({
           id: id("stp"),
           organizationId: ctx.organizationId,
           routeId: body.id,
-          deliveryId,
+          deliveryId: del.id,
           sequence: seq++,
           status: "pending",
           etaMinutes: null,
@@ -275,7 +301,7 @@ export async function PATCH(req: Request) {
         await db
           .update(schema.delivery)
           .set({ status: "assigned", updatedAt: new Date() })
-          .where(eq(schema.delivery.id, deliveryId));
+          .where(eq(schema.delivery.id, del.id));
       }
     }
 

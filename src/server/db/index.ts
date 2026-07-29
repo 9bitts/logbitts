@@ -216,6 +216,132 @@ CREATE TABLE IF NOT EXISTS proof (
   captured_at timestamptz NOT NULL DEFAULT now(),
   created_at timestamptz NOT NULL DEFAULT now()
 );
+CREATE TABLE IF NOT EXISTS warehouse (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  address text,
+  lat double precision,
+  lng double precision,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS product (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  sku text NOT NULL,
+  name text NOT NULL,
+  barcode text,
+  unit text NOT NULL DEFAULT 'UN',
+  weight_kg double precision DEFAULT 0,
+  volume_m3 double precision DEFAULT 0,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS product_org_sku ON product(organization_id, sku);
+CREATE TABLE IF NOT EXISTS location (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  warehouse_id text NOT NULL REFERENCES warehouse(id) ON DELETE CASCADE,
+  code text NOT NULL,
+  type text NOT NULL DEFAULT 'storage',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS location_wh_code ON location(warehouse_id, code);
+CREATE TABLE IF NOT EXISTS stock_level (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  product_id text NOT NULL REFERENCES product(id) ON DELETE CASCADE,
+  location_id text NOT NULL REFERENCES location(id) ON DELETE CASCADE,
+  qty double precision NOT NULL DEFAULT 0,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS stock_product_location ON stock_level(product_id, location_id);
+CREATE TABLE IF NOT EXISTS stock_movement (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  product_id text NOT NULL REFERENCES product(id) ON DELETE RESTRICT,
+  location_id text REFERENCES location(id) ON DELETE SET NULL,
+  type text NOT NULL,
+  qty double precision NOT NULL,
+  ref_type text,
+  ref_id text,
+  user_id text REFERENCES "user"(id) ON DELETE SET NULL,
+  notes text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS receipt (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  warehouse_id text NOT NULL REFERENCES warehouse(id) ON DELETE CASCADE,
+  code text,
+  supplier text,
+  status text NOT NULL DEFAULT 'open',
+  notes text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  closed_at timestamptz
+);
+CREATE TABLE IF NOT EXISTS receipt_line (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  receipt_id text NOT NULL REFERENCES receipt(id) ON DELETE CASCADE,
+  product_id text NOT NULL REFERENCES product(id) ON DELETE RESTRICT,
+  qty_expected double precision NOT NULL DEFAULT 0,
+  qty_received double precision NOT NULL DEFAULT 0,
+  putaway_location_id text REFERENCES location(id) ON DELETE SET NULL,
+  status text NOT NULL DEFAULT 'pending'
+);
+CREATE TABLE IF NOT EXISTS delivery_line (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  delivery_id text NOT NULL REFERENCES delivery(id) ON DELETE CASCADE,
+  product_id text NOT NULL REFERENCES product(id) ON DELETE RESTRICT,
+  qty double precision NOT NULL DEFAULT 1,
+  qty_picked double precision NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS pick_wave (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  warehouse_id text NOT NULL REFERENCES warehouse(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  wave_date text NOT NULL,
+  status text NOT NULL DEFAULT 'draft',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  released_at timestamptz,
+  completed_at timestamptz
+);
+CREATE TABLE IF NOT EXISTS pick_task (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  wave_id text NOT NULL REFERENCES pick_wave(id) ON DELETE CASCADE,
+  delivery_id text NOT NULL REFERENCES delivery(id) ON DELETE CASCADE,
+  delivery_line_id text REFERENCES delivery_line(id) ON DELETE SET NULL,
+  product_id text NOT NULL REFERENCES product(id) ON DELETE RESTRICT,
+  from_location_id text REFERENCES location(id) ON DELETE SET NULL,
+  qty double precision NOT NULL,
+  qty_picked double precision NOT NULL DEFAULT 0,
+  status text NOT NULL DEFAULT 'pending',
+  assigned_user_id text REFERENCES "user"(id) ON DELETE SET NULL,
+  completed_at timestamptz
+);
+CREATE TABLE IF NOT EXISTS cycle_count (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  warehouse_id text NOT NULL REFERENCES warehouse(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  status text NOT NULL DEFAULT 'open',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  completed_at timestamptz
+);
+CREATE TABLE IF NOT EXISTS cycle_count_line (
+  id text PRIMARY KEY,
+  organization_id text NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+  cycle_count_id text NOT NULL REFERENCES cycle_count(id) ON DELETE CASCADE,
+  product_id text NOT NULL REFERENCES product(id) ON DELETE RESTRICT,
+  location_id text NOT NULL REFERENCES location(id) ON DELETE RESTRICT,
+  qty_system double precision NOT NULL DEFAULT 0,
+  qty_counted double precision,
+  status text NOT NULL DEFAULT 'pending'
+);
 `;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

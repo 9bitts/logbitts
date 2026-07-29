@@ -102,14 +102,14 @@ export default function RotasPage() {
 
   const loadLists = useCallback(async () => {
     const [dRes, rRes, drvRes, vRes] = await Promise.all([
-      fetch(`/api/deliveries?date=${date}&status=pending`),
+      fetch(`/api/deliveries?date=${date}&status=ready_to_ship`),
       fetch(`/api/routes?date=${date}`),
       fetch("/api/drivers"),
       fetch("/api/vehicles"),
     ]);
     if (dRes.ok) {
       const all = await dRes.json();
-      setPending(all.filter((d: Delivery) => d.status === "pending"));
+      setPending(all.filter((d: Delivery) => d.status === "ready_to_ship"));
     }
     if (rRes.ok) setRoutes(await rRes.json());
     if (drvRes.ok) setDrivers(await drvRes.json());
@@ -194,7 +194,7 @@ export default function RotasPage() {
       </div>
       <div className="grid-2">
         <div className="panel">
-          <h3 style={{ marginTop: 0 }}>Entregas pendentes</h3>
+          <h3 style={{ marginTop: 0 }}>Entregas prontas (ready_to_ship)</h3>
           <table className="table">
             <thead>
               <tr>

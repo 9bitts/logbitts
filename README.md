@@ -1,70 +1,52 @@
-# Logbitts — Fase 1 (DMS + Roteirização)
+# Logbitts — Fase 2 (DMS + WMS)
 
-Gestão de entregas, montagem de rotas, torre de controle e app motorista (PWA) com POD.
+Gestão de entregas, rotas, torre, app motorista (PWA) **e WMS essencial** (recebimento, estoque, picking, inventário).
 
 ## Stack
 
 - Next.js (App Router) + TypeScript
 - PostgreSQL via **PGlite embutido** (zero config) ou Neon/Docker
-- Drizzle ORM + Better Auth (multi-tenant por organização)
+- Drizzle ORM + Better Auth (multi-tenant)
 - MapLibre + deep link Waze/Google Maps
-- Upload local de fotos/assinaturas (`uploads/`)
+- Upload local de POD (`/uploads`)
 
 ## Setup rápido
 
 ```bash
 npm install
-cp .env.example .env   # já pode usar o .env com USE_PGLITE=1
+cp .env.example .env
 npm run icons
 npm run db:seed
 npm run dev
 ```
 
-Abra [http://localhost:3000](http://localhost:3000)
-
 | Perfil | E-mail | Senha |
 |--------|--------|-------|
 | Despacho | `despacho@logbitts.demo` | `demo1234` |
+| Armazém | `armazem@logbitts.demo` | `demo1234` |
 | Motorista | `motorista@logbitts.demo` | `demo1234` |
 
-## Fluxo do piloto
+## Fluxo do piloto (Fase 2)
 
-1. **Despacho** → Entregas (seed já cria 8) → Rotas → selecionar → criar rota → otimizar → publicar  
-2. **Torre** → acompanhar progresso no mapa  
-3. **Motorista** (`/motorista` ou PWA) → iniciar rota → Waze → check-in → foto + assinatura → POD  
+1. **Estoque** → produtos/endereços (seed já cria CD + SKUs + saldos)  
+2. **Recebimento** (opcional) → conferir ASN → **App armazém** putaway  
+3. **Ondas** → selecionar entregas `pending` → criar → liberar  
+4. **App armazém** (`/armazem`) → picking → entrega vira `ready_to_ship`  
+5. **Rotas** → montar só com `ready_to_ship` → publicar  
+6. **Motorista** → POD em campo  
+7. **Inventário** → contagem cíclica ajusta estoque  
 
-## Postgres externo (Neon / Docker)
+## Escopo
 
-```bash
-docker compose up -d
-```
+**Inclui:** DMS Fase 1 + WMS (warehouse, product, location, stock, receipt, pick wave, cycle count), gate `ready_to_ship` nas rotas.
 
-No `.env`:
-
-```
-USE_PGLITE=0
-DATABASE_URL=postgresql://logbitts:logbitts@localhost:5432/logbitts
-```
-
-Depois: `npm run db:seed`.
-
-## Import CSV (stub ERP)
-
-`POST /api/deliveries/import` com CSV (`Content-Type: text/csv`) ou JSON.
-
-Colunas aceitas: `customer_name`, `address`, `city`, `state`, `zip`, `lat`, `lng`, `external_code`, `weight_kg`, `scheduled_date`, …
-
-## Escopo Fase 1
-
-Inclui: cadastros, entregas, rotas (drag-and-drop + otimização), torre, PWA motorista, POD, fila offline.
-
-Fora: CT-e/MDF-e/CIOT, WMS, marketplace, conector Winthor nativo.
+**Fora:** CT-e/MDF-e/CIOT, slotting IA, multi-CD, 3PL, marketplace, Winthor nativo.
 
 ## Scripts
 
 | Script | Função |
 |--------|--------|
 | `npm run dev` | Dev server |
-| `npm run db:seed` | Dados demo |
+| `npm run db:seed` | Dados demo (DMS + WMS) |
 | `npm run icons` | Ícones PWA |
 | `npm run build` | Build produção |

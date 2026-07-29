@@ -1,5 +1,5 @@
 import Papa from "papaparse";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDb, schema } from "@/server/db";
 import { json, requireDispatcher } from "@/server/session";
 import { id, todayISO } from "@/server/lib/ids";
@@ -111,8 +111,9 @@ export async function POST(req: Request) {
           createdCustomers++;
         }
 
+        const delId = id("del");
         await db.insert(schema.delivery).values({
-          id: id("del"),
+          id: delId,
           organizationId: ctx.organizationId,
           customerId: customer.id,
           externalCode: externalCode || null,
@@ -126,6 +127,32 @@ export async function POST(req: Request) {
           createdAt: new Date(),
           updatedAt: new Date(),
         });
+
+        const sku = pick(row, ["sku", "produto_sku"]);
+        const lineQty = pick(row, ["qty", "quantidade", "qtde"]);
+        if (sku) {
+          const [prd] = await db
+            .select()
+            .from(schema.product)
+            .where(
+              and(
+                eq(schema.product.organizationId, ctx.organizationId),
+                eq(schema.product.sku, sku.toUpperCase()),
+              ),
+            )
+            .limit(1);
+          if (prd) {
+            await db.insert(schema.deliveryLine).values({
+              id: id("dln"),
+              organizationId: ctx.organizationId,
+              deliveryId: delId,
+              productId: prd.id,
+              qty: lineQty ? Number(lineQty) : 1,
+              qtyPicked: 0,
+            });
+          }
+        }
+
         createdDeliveries++;
       } catch (err) {
         errors.push(`Linha ${i + 2}: ${(err as Error).message}`);

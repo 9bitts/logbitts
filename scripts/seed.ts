@@ -30,7 +30,7 @@ async function main() {
     email: string,
     name: string,
     password: string,
-    role: "owner" | "dispatcher" | "driver",
+    role: "owner" | "dispatcher" | "driver" | "warehouse",
   ) {
     const [existing] = await db
       .select()
@@ -63,20 +63,19 @@ async function main() {
     return userId!;
   }
 
-  const ownerId = await ensureUser(
-    "despacho@logbitts.demo",
-    "Ana Despacho",
-    "demo1234",
-    "owner",
-  );
+  await ensureUser("despacho@logbitts.demo", "Ana Despacho", "demo1234", "owner");
   const driverUserId = await ensureUser(
     "motorista@logbitts.demo",
     "Carlos Motorista",
     "demo1234",
     "driver",
   );
-
-  void ownerId;
+  await ensureUser(
+    "armazem@logbitts.demo",
+    "Bruno Armazém",
+    "demo1234",
+    "warehouse",
+  );
 
   let [drv] = await db
     .select()
@@ -109,6 +108,127 @@ async function main() {
       active: true,
       createdAt: new Date(),
     });
+  }
+
+  // --- WMS ---
+  let [wh] = await db
+    .select()
+    .from(schema.warehouse)
+    .where(eq(schema.warehouse.organizationId, orgId))
+    .limit(1);
+  if (!wh) {
+    wh = {
+      id: id("wh"),
+      organizationId: orgId,
+      name: "CD São Paulo",
+      address: "Av. do Estado, 1000 — São Paulo/SP",
+      lat: -23.5505,
+      lng: -46.6333,
+      createdAt: new Date(),
+    };
+    await db.insert(schema.warehouse).values(wh);
+  }
+
+  const [locCount] = await db
+    .select()
+    .from(schema.location)
+    .where(eq(schema.location.warehouseId, wh.id))
+    .limit(1);
+
+  const locationIds: Record<string, string> = {};
+  if (!locCount) {
+    const defs = [
+      { code: "REC-01", type: "receiving" },
+      { code: "SHIP-01", type: "shipping" },
+      { code: "P-01-01", type: "picking" },
+      { code: "P-01-02", type: "picking" },
+      { code: "A-01-01", type: "storage" },
+      { code: "A-01-02", type: "storage" },
+      { code: "A-02-01", type: "storage" },
+      { code: "A-02-02", type: "storage" },
+      { code: "B-01-01", type: "storage" },
+      { code: "B-01-02", type: "storage" },
+      { code: "B-02-01", type: "storage" },
+      { code: "B-02-02", type: "storage" },
+    ];
+    for (const d of defs) {
+      const locId = id("loc");
+      locationIds[d.code] = locId;
+      await db.insert(schema.location).values({
+        id: locId,
+        organizationId: orgId,
+        warehouseId: wh.id,
+        code: d.code,
+        type: d.type,
+        createdAt: new Date(),
+      });
+    }
+  } else {
+    const locs = await db
+      .select()
+      .from(schema.location)
+      .where(eq(schema.location.warehouseId, wh.id));
+    for (const l of locs) locationIds[l.code] = l.id;
+  }
+
+  const productDefs = [
+    { sku: "ARZ-5KG", name: "Arroz Tipo 1 5kg", weightKg: 5 },
+    { sku: "FEJ-1KG", name: "Feijão Carioca 1kg", weightKg: 1 },
+    { sku: "OLE-900", name: "Óleo de Soja 900ml", weightKg: 0.9 },
+    { sku: "ACU-1KG", name: "Açúcar Cristal 1kg", weightKg: 1 },
+    { sku: "CAF-500", name: "Café Torrado 500g", weightKg: 0.5 },
+    { sku: "MAC-500", name: "Macarrão Espaguete 500g", weightKg: 0.5 },
+    { sku: "LEI-1L", name: "Leite UHT 1L", weightKg: 1 },
+    { sku: "BIS-140", name: "Biscoito Recheado 140g", weightKg: 0.14 },
+  ];
+
+  const productIds: string[] = [];
+  for (const p of productDefs) {
+    const [ex] = await db
+      .select()
+      .from(schema.product)
+      .where(eq(schema.product.sku, p.sku))
+      .limit(1);
+    if (ex) {
+      productIds.push(ex.id);
+      continue;
+    }
+    const pid = id("prd");
+    productIds.push(pid);
+    await db.insert(schema.product).values({
+      id: pid,
+      organizationId: orgId,
+      sku: p.sku,
+      name: p.name,
+      barcode: `789${Math.floor(Math.random() * 1e10)}`,
+      unit: "UN",
+      weightKg: p.weightKg,
+      volumeM3: 0.01,
+      active: true,
+      createdAt: new Date(),
+    });
+  }
+
+  const [stockCount] = await db
+    .select()
+    .from(schema.stockLevel)
+    .where(eq(schema.stockLevel.organizationId, orgId))
+    .limit(1);
+  if (!stockCount) {
+    const pickLocs = ["P-01-01", "P-01-02", "A-01-01", "A-01-02", "A-02-01"];
+    for (let i = 0; i < productIds.length; i++) {
+      const code = pickLocs[i % pickLocs.length];
+      const locId = locationIds[code];
+      if (!locId) continue;
+      await db.insert(schema.stockLevel).values({
+        id: id("stk"),
+        organizationId: orgId,
+        productId: productIds[i],
+        locationId: locId,
+        qty: 80 + i * 15,
+        updatedAt: new Date(),
+      });
+    }
   }
 
   const [custCount] = await db.select().from(schema.customer).limit(1);
@@ -219,13 +339,15 @@ async function main() {
         notes: null,
         createdAt: new Date(),
       });
+      const delId = id("del");
+      const ready = i < 4;
       await db.insert(schema.delivery).values({
-        id: id("del"),
+        id: delId,
         organizationId: orgId,
         customerId: cusId,
         externalCode: `PED-${1000 + i}`,
         invoiceNumber: `NF-${2000 + i}`,
-        status: "pending",
+        status: ready ? "ready_to_ship" : "pending",
         weightKg: 20 + i * 5,
         volumeM3: 0.2 + i * 0.05,
         packages: 1 + (i % 3),
@@ -234,16 +356,56 @@ async function main() {
         createdAt: new Date(),
         updatedAt: new Date(),
       });
+      await db.insert(schema.deliveryLine).values({
+        id: id("dln"),
+        organizationId: orgId,
+        deliveryId: delId,
+        productId: productIds[i % productIds.length],
+        qty: 2 + (i % 3),
+        qtyPicked: ready ? 2 + (i % 3) : 0,
+      });
+    }
+  } else {
+    // Existing Phase 1 deliveries: attach lines + promote some to ready_to_ship
+    const deliveries = await db
+      .select()
+      .from(schema.delivery)
+      .where(eq(schema.delivery.organizationId, orgId));
+    let idx = 0;
+    for (const d of deliveries) {
+      const [line] = await db
+        .select()
+        .from(schema.deliveryLine)
+        .where(eq(schema.deliveryLine.deliveryId, d.id))
+        .limit(1);
+      if (!line && productIds.length) {
+        await db.insert(schema.deliveryLine).values({
+          id: id("dln"),
+          organizationId: orgId,
+          deliveryId: d.id,
+          productId: productIds[idx % productIds.length],
+          qty: 2,
+          qtyPicked: d.status === "pending" && idx < 4 ? 2 : 0,
+        });
+      }
+      if (d.status === "pending" && idx < 4) {
+        await db
+          .update(schema.delivery)
+          .set({ status: "ready_to_ship", updatedAt: new Date() })
+          .where(eq(schema.delivery.id, d.id));
+      }
+      idx++;
     }
   }
 
   console.log(`
-Seed OK (PGlite em .data/pglite)
+Seed OK (PGlite + WMS Fase 2)
 
 Despacho:  despacho@logbitts.demo / demo1234
+Armazém:   armazem@logbitts.demo / demo1234
 Motorista: motorista@logbitts.demo / demo1234
 
-Abra http://localhost:3000
+Fluxo: Estoque → Ondas → App armazém → Rotas (ready_to_ship)
 `);
 }
 
